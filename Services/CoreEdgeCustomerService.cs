@@ -1,8 +1,8 @@
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Models;
 using Microsoft.Data.SqlClient;
 using System.Data;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public class CoreEdgeCustomerService(IConfiguration configuration)
 {

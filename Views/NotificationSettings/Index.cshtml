@@ -1,5 +1,5 @@
 @model NotificationSettingsViewModel
-@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@inject MyQabayel.Admin.Services.LoyaltyCustomerAudience GroupAudience
 @inject IConfiguration Configuration
 @{ ViewData["Title"] = "Push Settings"; var activeEnvironment = await GroupAudience.GetConfiguredPushEnvironmentAsync(Context.RequestAborted); }
 

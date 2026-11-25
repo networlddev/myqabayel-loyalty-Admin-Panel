@@ -1,6 +1,6 @@
-using QabayelMall.API.Data;
-using QabayelMall.API.Models;
-using QabayelMall.API.Services;
+using MyQabayel.Admin.Data;
+using MyQabayel.Admin.Models;
+using MyQabayel.Admin.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;

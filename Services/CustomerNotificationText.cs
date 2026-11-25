@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public static class CustomerNotificationText
 {

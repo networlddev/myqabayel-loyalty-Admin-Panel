@@ -1,8 +1,8 @@
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace QabayelMall.API.Data;
+namespace MyQabayel.Admin.Data;
 
 public class AdminDbContext(DbContextOptions<AdminDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {

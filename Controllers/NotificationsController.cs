@@ -1,10 +1,10 @@
-using QabayelMall.API.Data;
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Data;
+using MyQabayel.Admin.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QabayelMall.API.Services;
+using MyQabayel.Admin.Services;
 
-namespace QabayelMall.API.Controllers;
+namespace MyQabayel.Admin.Controllers;
 
 public class NotificationsController(AdminDbContext db, LoyaltyCustomerAudience audience,
     FirebasePushSender firebase, IConfiguration configuration,

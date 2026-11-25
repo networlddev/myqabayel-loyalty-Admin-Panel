@@ -1,6 +1,6 @@
-using QabayelMall.API.Services;
+using MyQabayel.Admin.Services;
 using Microsoft.AspNetCore.Mvc;
-namespace QabayelMall.API.Controllers;
+namespace MyQabayel.Admin.Controllers;
 public class CustomersController(CoreEdgeCustomerService coreEdge, LoyaltyCustomerAudience audience,
     CustomerAppManagementService appManagement) : Controller
 {

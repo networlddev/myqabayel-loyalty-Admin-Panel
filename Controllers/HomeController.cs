@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Models;
 using Microsoft.AspNetCore.Authorization;
 
-namespace QabayelMall.API.Controllers;
+namespace MyQabayel.Admin.Controllers;
 
 public class HomeController : Controller
 {

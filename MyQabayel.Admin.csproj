@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>MyQabayel.Admin</AssemblyName>
-    <RootNamespace>QabayelMall.API</RootNamespace>
+    <RootNamespace>MyQabayel.Admin</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>

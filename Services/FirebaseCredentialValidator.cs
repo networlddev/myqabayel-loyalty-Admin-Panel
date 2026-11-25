@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Google.Apis.Auth.OAuth2;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public static class FirebaseCredentialValidator
 {

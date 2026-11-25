@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public sealed class PromoImageStorage(IWebHostEnvironment hosting,
     PublicAssetUrlService assetUrls)

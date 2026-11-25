@@ -1,9 +1,9 @@
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace QabayelMall.API.Controllers;
+namespace MyQabayel.Admin.Controllers;
 
 public class AccountController(
     SignInManager<ApplicationUser> signInManager,

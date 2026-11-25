@@ -1,7 +1,7 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public sealed record CustomerAppState(bool ShowFlyers, bool ShowOffers, DateTime? LastSeenAtUtc);
 public sealed record CustomerActivityCounts(int OnlineLastFiveMinutes, int ActiveLast24Hours);

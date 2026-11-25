@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace QabayelMall.API.Models;
+namespace MyQabayel.Admin.Models;
 
 public sealed record PromoDepartment(int Id, string Name, string Code);
 public sealed record PromoCustomer(long Id, string Name, string MobileNo);

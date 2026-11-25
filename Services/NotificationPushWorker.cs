@@ -1,11 +1,11 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using QabayelMall.API.Data;
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Data;
+using MyQabayel.Admin.Models;
 using FirebaseAdmin.Messaging;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public sealed class NotificationPushWorker(
     IServiceScopeFactory scopeFactory,

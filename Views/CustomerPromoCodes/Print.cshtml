@@ -1,6 +1,6 @@
 @model PromoPrintViewModel
-@inject QabayelMall.API.Services.LoyaltyCurrencyService CurrencyService
-@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@inject MyQabayel.Admin.Services.LoyaltyCurrencyService CurrencyService
+@inject MyQabayel.Admin.Services.LoyaltyCustomerAudience GroupAudience
 @{
     ViewData["Title"] = "Print Customer PromoCode";
     var currencyCode = await CurrencyService.GetCodeAsync(
@@ -34,7 +34,7 @@
     <img src="~/images/al-qabayel-discount-center.jpg" alt="Al Qabayel Discount Center" style="width:64px;height:64px;object-fit:contain" />
     <h1 class="h3 mt-3">@Model.Promo.Name</h1>
     <p>@Model.Promo.Caption</p>
-    <div class="h4">@(Model.Code.Amount > 0 ? $"{QabayelMall.API.Services.LoyaltyCurrencyService.FormatAmount(Model.Code.Amount, currencyCode)} off" : $"{Model.Code.Percentage}% off")</div>
+    <div class="h4">@(Model.Code.Amount > 0 ? $"{MyQabayel.Admin.Services.LoyaltyCurrencyService.FormatAmount(Model.Code.Amount, currencyCode)} off" : $"{Model.Code.Percentage}% off")</div>
     <p class="text-muted">For @Model.Code.CustomerName · Valid through @Model.Code.Expiry.ToString("dd MMM yyyy, h:mm tt")</p>
     <img src="@Model.BarcodeSvg" alt="Promo barcode" />
     <p class="small text-muted mb-0">Present this barcode at checkout. Discount applies to eligible departments only. Status: @Model.Code.Status.</p>

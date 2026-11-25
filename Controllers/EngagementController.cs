@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using QabayelMall.API.Services;
+using MyQabayel.Admin.Services;
 
-namespace QabayelMall.API.Controllers;
+namespace MyQabayel.Admin.Controllers;
 
 public sealed class EngagementController(EngagementMonitorService monitor,
     LoyaltyCustomerAudience groups) : Controller

@@ -4,10 +4,10 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using QabayelMall.API.Data;
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Data;
+using MyQabayel.Admin.Models;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public sealed class PromoNotificationService(AdminDbContext db, IConfiguration configuration,
     LoyaltyCurrencyService currencies)

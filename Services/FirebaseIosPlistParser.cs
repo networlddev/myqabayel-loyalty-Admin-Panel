@@ -1,8 +1,8 @@
 using System.Xml;
 using System.Xml.Linq;
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Models;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public static class FirebaseIosPlistParser
 {

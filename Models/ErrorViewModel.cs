@@ -1,4 +1,4 @@
-namespace QabayelMall.API.Models;
+namespace MyQabayel.Admin.Models;
 
 public class ErrorViewModel
 {

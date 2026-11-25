@@ -1,4 +1,4 @@
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public sealed class PublicAssetUrlService(IConfiguration configuration)
 {

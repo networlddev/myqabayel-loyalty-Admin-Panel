@@ -1,4 +1,4 @@
-@using QabayelMall.API.Services
+@using MyQabayel.Admin.Services
 @model IReadOnlyList<LoyaltyNotification>
 @{
     ViewData["Title"] = "App Notifications";
@@ -64,7 +64,7 @@ else if (Equals(ViewData["DeviceAvailabilityUnavailable"], true))
                 <td>
                     <div class="d-flex align-items-start gap-2">
                         @if (!string.IsNullOrWhiteSpace(item.ImageUrl)) { <img src="@item.ImageUrl" alt="" class="rounded border" style="width: 52px; height: 52px; object-fit: cover" /> }
-                        <div><b>@QabayelMall.API.Services.CustomerNotificationText.HidePromoCodes(item.Title)</b><small class="d-block text-muted">@QabayelMall.API.Services.CustomerNotificationText.HidePromoCodes(item.Message)</small>
+                        <div><b>@MyQabayel.Admin.Services.CustomerNotificationText.HidePromoCodes(item.Title)</b><small class="d-block text-muted">@MyQabayel.Admin.Services.CustomerNotificationText.HidePromoCodes(item.Message)</small>
                             @if (item.TargetId.HasValue) { <small class="d-block text-muted">Opens @item.TargetType #@item.TargetId</small> }
                         </div>
                     </div>

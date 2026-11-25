@@ -1,6 +1,6 @@
 @model PromoDetailsViewModel
-@inject QabayelMall.API.Services.LoyaltyCurrencyService CurrencyService
-@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@inject MyQabayel.Admin.Services.LoyaltyCurrencyService CurrencyService
+@inject MyQabayel.Admin.Services.LoyaltyCustomerAudience GroupAudience
 @{
     ViewData["Title"] = "PromoCode Details";
     var currencyCode = await CurrencyService.GetCodeAsync(
@@ -55,14 +55,14 @@
                     <td>
                         @if (code.Status == "Issued")
                         {
-                            <input class="form-check-input issued-notification-choice" type="checkbox" value="@code.VoucherNo" aria-label="Notify @code.CustomerName" data-name="@code.CustomerName" data-discount="@(code.Amount > 0 ? QabayelMall.API.Services.LoyaltyCurrencyService.FormatAmount(code.Amount, currencyCode) : $"{code.Percentage}%") off" data-expiry="@code.Expiry.ToString("dd MMM yyyy")" />
+                            <input class="form-check-input issued-notification-choice" type="checkbox" value="@code.VoucherNo" aria-label="Notify @code.CustomerName" data-name="@code.CustomerName" data-discount="@(code.Amount > 0 ? MyQabayel.Admin.Services.LoyaltyCurrencyService.FormatAmount(code.Amount, currencyCode) : $"{code.Percentage}%") off" data-expiry="@code.Expiry.ToString("dd MMM yyyy")" />
                         }
                     </td>
                     <td>@code.CustomerName <small class="text-muted d-block">ID @code.CustomerId · @code.MobileNo</small></td>
-                    <td>@(code.Amount > 0 ? QabayelMall.API.Services.LoyaltyCurrencyService.FormatAmount(code.Amount, currencyCode) : $"{code.Percentage}%")</td>
+                    <td>@(code.Amount > 0 ? MyQabayel.Admin.Services.LoyaltyCurrencyService.FormatAmount(code.Amount, currencyCode) : $"{code.Percentage}%")</td>
                     <td>@code.Status</td>
                     <td>@(code.InvoiceNo?.ToString() ?? "—")</td>
-                    <td>@QabayelMall.API.Services.LoyaltyCurrencyService.FormatAmount(code.UsedAmount, currencyCode)</td>
+                    <td>@MyQabayel.Admin.Services.LoyaltyCurrencyService.FormatAmount(code.UsedAmount, currencyCode)</td>
                     <td class="text-end text-nowrap">
                         <a class="btn btn-sm btn-outline-secondary" asp-action="Print" asp-route-id="@Model.Promo.Id" asp-route-voucherNo="@code.VoucherNo">Print</a>
                         @if (code.Status == "Issued")

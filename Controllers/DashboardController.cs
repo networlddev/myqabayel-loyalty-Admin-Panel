@@ -1,8 +1,8 @@
-using QabayelMall.API.Data;
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Data;
+using MyQabayel.Admin.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-namespace QabayelMall.API.Controllers;
+namespace MyQabayel.Admin.Controllers;
 public class DashboardController(AdminDbContext db, Services.CoreEdgeCustomerService coreEdge,
     Services.CustomerAppManagementService appManagement,
     Services.LoyaltyCustomerAudience audience, IConfiguration configuration) : Controller

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace QabayelMall.API.Models;
+namespace MyQabayel.Admin.Models;
 
 public sealed class LoyaltyCurrencySetting
 {

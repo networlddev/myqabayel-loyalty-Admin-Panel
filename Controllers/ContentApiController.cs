@@ -1,10 +1,10 @@
-using QabayelMall.API.Data;
+using MyQabayel.Admin.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QabayelMall.API.Services;
+using MyQabayel.Admin.Services;
 
-namespace QabayelMall.API.Controllers;
+namespace MyQabayel.Admin.Controllers;
 
 [ApiController]
 [AllowAnonymous]

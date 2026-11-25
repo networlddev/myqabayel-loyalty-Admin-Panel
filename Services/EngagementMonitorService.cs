@@ -1,7 +1,7 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public sealed record EngagementContent(long Id, string ContentType, string Title, string Status,
     DateTime UpdatedAtUtc, long Reactions, long Comments);

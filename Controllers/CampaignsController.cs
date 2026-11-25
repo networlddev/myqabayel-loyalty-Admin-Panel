@@ -1,9 +1,9 @@
-using QabayelMall.API.Data;
-using QabayelMall.API.Models;
-using QabayelMall.API.Services;
+using MyQabayel.Admin.Data;
+using MyQabayel.Admin.Models;
+using MyQabayel.Admin.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-namespace QabayelMall.API.Controllers;
+namespace MyQabayel.Admin.Controllers;
 public class CampaignsController(AdminDbContext db, IWebHostEnvironment environment,
     PublicAssetUrlService assetUrls, LoyaltyCustomerAudience audience) : Controller
 {

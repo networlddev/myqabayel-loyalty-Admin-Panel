@@ -1,9 +1,9 @@
 using System.Data;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Models;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public sealed record PromoCreateDraft(
     string Name, string Caption, string? Body, string CampaignCode,

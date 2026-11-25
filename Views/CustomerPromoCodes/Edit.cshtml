@@ -1,6 +1,6 @@
 @model PromoEditViewModel
-@inject QabayelMall.API.Services.LoyaltyCurrencyService CurrencyService
-@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@inject MyQabayel.Admin.Services.LoyaltyCurrencyService CurrencyService
+@inject MyQabayel.Admin.Services.LoyaltyCustomerAudience GroupAudience
 @{
     ViewData["Title"] = "Edit Customer PromoCode";
     var currencyCode = await CurrencyService.GetCodeAsync(

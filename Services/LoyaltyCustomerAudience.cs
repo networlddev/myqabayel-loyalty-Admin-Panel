@@ -1,9 +1,9 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using QabayelMall.API.Data;
+using MyQabayel.Admin.Data;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public sealed record LoyaltyGroupSnapshot(int CCode, int LoyaltyGroupId, string GroupCode);
 public sealed record ActiveDeviceAvailability(string Environment, int CustomerCount, int DeviceCount);

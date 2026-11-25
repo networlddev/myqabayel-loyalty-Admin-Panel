@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace QabayelMall.API.Models;
+namespace MyQabayel.Admin.Models;
 
 public class ApplicationUser : IdentityUser
 {

@@ -2,7 +2,7 @@ using FirebaseAdmin;
 using FirebaseAdmin.Messaging;
 using Google.Apis.Auth.OAuth2;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public sealed class FirebasePushSender(IConfiguration configuration, ILogger<FirebasePushSender> logger) : IDisposable
 {
@@ -80,7 +80,7 @@ public sealed class FirebasePushSender(IConfiguration configuration, ILogger<Fir
             {
                 Credential = GoogleCredential.FromFile(path),
                 ProjectId = projectId
-            }, $"QabayelMall-{environment}-{Guid.NewGuid():N}");
+            }, $"MyQabayel-{environment}-{Guid.NewGuid():N}");
             _apps.Add(environment, app);
             logger.LogInformation("Firebase {Environment} sender initialized", environment);
             return app;

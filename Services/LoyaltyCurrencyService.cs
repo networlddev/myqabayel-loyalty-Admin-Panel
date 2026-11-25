@@ -1,8 +1,8 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
-using QabayelMall.API.Data;
+using MyQabayel.Admin.Data;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public sealed class LoyaltyCurrencyService(AdminDbContext db)
 {

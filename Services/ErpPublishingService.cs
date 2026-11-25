@@ -1,8 +1,8 @@
 using System.Data;
-using QabayelMall.API.Models;
+using MyQabayel.Admin.Models;
 using Microsoft.Data.SqlClient;
 
-namespace QabayelMall.API.Services;
+namespace MyQabayel.Admin.Services;
 
 public class ErpPublishingService(IConfiguration configuration)
 {

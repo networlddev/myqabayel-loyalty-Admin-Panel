@@ -2,12 +2,12 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using QabayelMall.API.Models;
-using QabayelMall.API.Services;
+using MyQabayel.Admin.Models;
+using MyQabayel.Admin.Services;
 using ZXing;
 using ZXing.Common;
 
-namespace QabayelMall.API.Controllers;
+namespace MyQabayel.Admin.Controllers;
 
 public sealed class CustomerPromoCodesController(
     CustomerPromoService promos, PromoNotificationService promoNotifications,

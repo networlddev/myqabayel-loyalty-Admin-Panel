@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QabayelMall.API.Data;
-using QabayelMall.API.Models;
-using QabayelMall.API.Services;
+using MyQabayel.Admin.Data;
+using MyQabayel.Admin.Models;
+using MyQabayel.Admin.Services;
 
-namespace QabayelMall.API.Controllers;
+namespace MyQabayel.Admin.Controllers;
 
 public sealed class NotificationSettingsController(
     IConfiguration configuration,
