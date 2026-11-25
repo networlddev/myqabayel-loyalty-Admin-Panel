@@ -1,6 +1,8 @@
-# MY QABAYEL Admin
+# MyQabayel.Admin
 
-Separate .NET 8 MVC administration portal for Al Qabayel Discount Center's loyalty programme. It uses the `QABAYEL` loyalty group, the `MyQabayelAdminDB` admin database, and the `ZWCORE` ERP database. Its login and cookies are separate from the Qabayel Mall admin portal.
+This repository contains the **MyQabayel.Admin** .NET 8 MVC portal for Al Qabayel Discount Center's loyalty programme. The Visual Studio solution, project, assembly, and code namespace are all named `MyQabayel.Admin`.
+
+The portal uses the `QABAYEL` loyalty group, `MyQabayelAdminDB` for administration, and `ZWCORE` for ERP data. It has its own administrator login and authentication cookie.
 
 ## Open and build
 
