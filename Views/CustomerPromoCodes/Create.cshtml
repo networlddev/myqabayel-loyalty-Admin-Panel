@@ -1,0 +1,349 @@
+@model PromoCreateViewModel
+@inject QabayelMall.API.Services.LoyaltyCurrencyService CurrencyService
+@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@{
+    ViewData["Title"] = "Create PromoCode Campaign";
+    var currencyCode = await CurrencyService.GetCodeAsync(
+        await GroupAudience.GetConfiguredGroupCodeAsync(Context.RequestAborted), Context.RequestAborted);
+}
+
+<div class="form-card">
+    <span class="eyebrow">CUSTOMER PROMOCODE</span>
+    <h1>Create promo master</h1>
+    <p class="text-muted">Set the campaign and departments, then optionally issue codes to selected customers now.</p>
+    @if (Model.DraftId.HasValue) { <div class="alert alert-info">Editing saved draft #@Model.DraftId. No customer codes have been issued from this draft.</div> }
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="row g-3 mt-2">
+        @Html.AntiForgeryToken()
+        <input asp-for="DraftId" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="col-md-6"><label asp-for="Name" class="form-label">Name</label><input asp-for="Name" class="form-control"/><span asp-validation-for="Name" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="CampaignCode" class="form-label">Campaign identifier</label><input asp-for="CampaignCode" class="form-control"/><span asp-validation-for="CampaignCode" class="text-danger"></span><div class="form-text">This identifies the campaign; it is not the customer's scanned code.</div></div>
+        <div class="col-12"><label asp-for="Caption" class="form-label">Caption</label><input asp-for="Caption" class="form-control"/><span asp-validation-for="Caption" class="text-danger"></span></div>
+        <div class="col-12"><label asp-for="Body" class="form-label">Description</label><textarea asp-for="Body" class="form-control" rows="3"></textarea><span asp-validation-for="Body" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="ValidityDate" class="form-label">Last valid day</label><input asp-for="ValidityDate" type="date" class="form-control"/><span asp-validation-for="ValidityDate" class="text-danger"></span><div class="form-text">Saved as 11:59:59 PM on this day, using the ERP server's local time.</div></div>
+        <div class="col-12"><label asp-for="ImageUpload" class="form-label">Promo image (optional)</label><input asp-for="ImageUpload" class="form-control" type="file" accept="image/jpeg,image/png,image/webp"/><span asp-validation-for="ImageUpload" class="text-danger"></span><div class="form-text">JPEG, PNG or WebP, up to 5 MB. The image appears in app notifications; rich push images require a publicly reachable HTTPS URL.</div>
+            @if (!string.IsNullOrWhiteSpace(Model.ImageUrl)) { <div class="mt-2"><img src="@Model.ImageUrl" alt="Current promo image" style="max-width:180px;max-height:120px;object-fit:contain"/><label class="ms-2"><input asp-for="RemoveImage"/> Remove image</label></div> }
+        </div>
+        <div class="col-12 mt-4"><h2 class="h5 mb-1">Issue customer codes now <span class="text-muted fw-normal">(optional)</span></h2><p class="text-muted small mb-1">The amount or percentage is saved on each customer's issued voucher. Choose customers individually or use a purchase-based audience.</p></div>
+        <div class="col-md-6"><label asp-for="DiscountType" class="form-label">Promo discount type</label><select asp-for="DiscountType" class="form-select"><option value="Amount">Fixed @currencyCode amount</option><option value="Percentage">Percentage</option></select><span asp-validation-for="DiscountType" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="DiscountValue" class="form-label">Promo amount or percentage</label><input asp-for="DiscountValue" class="form-control" type="number" min="0.01" step="0.01" placeholder="Enter value for selected customers"/><span asp-validation-for="DiscountValue" class="text-danger"></span><div id="discount-help" class="form-text">For a fixed discount, enter a @currencyCode amount with up to two decimals.</div></div>
+        <div class="col-12">
+            <label asp-for="AudienceType" class="form-label">Which customers should receive a code?</label>
+            <select asp-for="AudienceType" class="form-select">
+                <option value="Selected">Search and select customers</option>
+                <option value="All">All active customers in this loyalty group</option>
+                <option value="Purchased30">Purchased in the last 30 days</option>
+                <option value="Purchased60">Purchased in the last 60 days</option>
+                <option value="Purchased90">Purchased in the last 90 days</option>
+                <option value="NoPurchase30">No recorded purchase in the last 30 days</option>
+                <option value="NoPurchase60">No recorded purchase in the last 60 days</option>
+                <option value="NoPurchase90">No recorded purchase in the last 90 days</option>
+                <option value="NeverPurchased">No recorded purchase ever</option>
+            </select>
+            <span asp-validation-for="AudienceType" class="text-danger"></span>
+            <div class="form-text">Purchase filters use CoreEdge invoice records, not physical mall visits. No-purchase periods exclude customers who registered during that period.</div>
+            <div id="promo-audience-preview" class="alert alert-light border py-2 mt-2 mb-0" aria-live="polite" hidden></div>
+        </div>
+        <div class="col-12" id="manual-customer-selection">
+            <label for="promo-customer-search" class="form-label">Customers to receive this PromoCode</label>
+            <input id="promo-customer-search" class="form-control" autocomplete="off" placeholder="Search active customers by name, mobile or ID" />
+            <input asp-for="SelectedCustomerIds" type="hidden" />
+            <span asp-validation-for="SelectedCustomerIds" class="text-danger"></span>
+            <div id="promo-customer-results" class="list-group mt-2"></div>
+            <div id="promo-selected-customers" class="d-flex flex-wrap gap-2 mt-2" aria-live="polite"></div>
+            <div id="promo-customer-count" class="form-text">Select up to 50 active customers. Each customer gets a different code.</div>
+        </div>
+        <div class="col-12 d-flex flex-wrap align-items-center gap-2">
+            <label class="form-check-label"><input asp-for="SendNotification" class="form-check-input me-2"/>Notify this audience in the app after issuing</label>
+            <button id="edit-promo-notification" class="btn btn-sm btn-outline-secondary" type="button" hidden>Edit notification</button>
+            <div class="form-text w-100">Each customer receives a message with their own name and offer. Their barcode stays in the app. Push delivery needs a registered device.</div>
+        </div>
+        <div class="modal fade" id="promo-notification-editor" tabindex="-1" aria-labelledby="promo-notification-heading" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header"><h2 id="promo-notification-heading" class="modal-title h5">Design app notification</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body">
+                        <p class="text-muted small">Type <code>{</code> in the title or message to choose a customer detail. The private code is not included in notification text.</p>
+                        <div class="mb-3"><label asp-for="NotificationTitle" class="form-label">Notification title</label><div class="position-relative"><input asp-for="NotificationTitle" class="form-control" maxlength="150" autocomplete="off" aria-autocomplete="list" aria-controls="notification-title-suggestions" aria-expanded="false"/><div id="notification-title-suggestions" class="list-group position-absolute start-0 end-0 shadow-sm d-none" role="listbox" style="z-index:1060;max-height:220px;overflow:auto" hidden></div></div><span asp-validation-for="NotificationTitle" class="text-danger"></span></div>
+                        <div class="mb-3"><label asp-for="NotificationMessage" class="form-label">Notification message</label><div class="position-relative"><textarea asp-for="NotificationMessage" class="form-control" rows="4" maxlength="500" aria-autocomplete="list" aria-controls="notification-message-suggestions" aria-expanded="false"></textarea><div id="notification-message-suggestions" class="list-group position-absolute start-0 end-0 shadow-sm d-none" role="listbox" style="z-index:1060;max-height:220px;overflow:auto" hidden></div></div><span asp-validation-for="NotificationMessage" class="text-danger"></span></div>
+                        <div class="mb-3"><label asp-for="NotificationEnvironment" class="form-label">Firebase environment</label><input asp-for="NotificationEnvironment" type="hidden"/><div class="form-control-plaintext">@Model.NotificationEnvironment · <a asp-controller="Settings" asp-action="Index">Change in Loyalty Settings</a></div></div>
+                        <div class="mb-3"><label asp-for="NotificationImageUpload" class="form-label">Notification image (optional)</label><input asp-for="NotificationImageUpload" class="form-control" type="file" accept="image/jpeg,image/png,image/webp"/><span asp-validation-for="NotificationImageUpload" class="text-danger"></span><div class="form-text">If empty, the promo image above is used. JPEG, PNG or WebP; up to 5 MB.</div></div>
+                        <div class="mb-3"><label asp-for="NotificationImageHttpsUrl" class="form-label">Public HTTPS image URL (optional)</label><input asp-for="NotificationImageHttpsUrl" class="form-control" type="url" placeholder="https://example.com/promo.jpg"/><span asp-validation-for="NotificationImageHttpsUrl" class="text-danger"></span><div class="form-text">Choose an upload or a URL. A public HTTPS image can appear in the phone's push notification.</div></div>
+                        @if (!string.IsNullOrWhiteSpace(Model.NotificationImageUrl)) { <div class="mb-3"><img src="@Model.NotificationImageUrl" alt="Saved notification image" style="max-width:180px;max-height:120px;object-fit:contain"/><label class="ms-2"><input asp-for="RemoveNotificationImage"/> Remove saved notification image</label></div> }
+                        <div class="alert alert-light border mb-0"><strong>Preview for Safwan</strong><div id="promo-notification-title-preview" class="fw-semibold mt-2"></div><div id="promo-notification-message-preview" class="mt-1"></div></div>
+                    </div>
+                    <div class="modal-footer"><button type="button" class="btn btn-centro" data-bs-dismiss="modal">Done</button></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 mt-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                <label class="form-label mb-0">Eligible departments</label>
+                <div class="d-flex align-items-center gap-2">
+                    <span id="department-selection-count" class="small text-muted" aria-live="polite"></span>
+                    <button id="select-all-departments" class="btn btn-sm btn-outline-secondary" type="button">Select all</button>
+                    <button id="clear-departments" class="btn btn-sm btn-outline-secondary" type="button">Clear</button>
+                </div>
+            </div>
+            <span asp-validation-for="DepartmentIds" class="text-danger d-block"></span>
+            <div id="eligible-departments" class="row g-2 rounded border p-3" style="max-height:340px;overflow:auto">
+                @foreach (var department in Model.AvailableDepartments)
+                {
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-check-label d-flex align-items-start gap-2">
+                            <input class="form-check-input mt-1" type="checkbox" name="DepartmentIds" value="@department.Id" checked="@Model.DepartmentIds.Contains(department.Id)" />
+                            <span>@department.Name <small class="text-muted">(@department.Code)</small></span>
+                        </label>
+                    </div>
+                }
+            </div>
+            <div class="form-text">At least one active department is required before a customer code can be issued.</div>
+        </div>
+        <div class="col-12 d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" asp-action="Index">Cancel</a><button class="btn btn-outline-secondary" type="submit" name="saveMode" value="Draft" formnovalidate>Save as draft</button><button id="save-promo" class="btn btn-centro" type="submit" name="saveMode" value="Apply">Create campaign</button></div>
+    </form>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const checkboxes = [...document.querySelectorAll('#eligible-departments input[name="DepartmentIds"]')];
+            const count = document.getElementById('department-selection-count');
+            const updateCount = () => { count.textContent = `${checkboxes.filter(box => box.checked).length} of ${checkboxes.length} selected`; };
+            document.getElementById('select-all-departments').addEventListener('click', () => {
+                checkboxes.forEach(box => { box.checked = true; });
+                updateCount();
+            });
+            document.getElementById('clear-departments').addEventListener('click', () => {
+                checkboxes.forEach(box => { box.checked = false; });
+                updateCount();
+            });
+            checkboxes.forEach(box => box.addEventListener('change', updateCount));
+            updateCount();
+
+            const type = document.getElementById('DiscountType');
+            const value = document.getElementById('DiscountValue');
+            const discountHelp = document.getElementById('discount-help');
+            const currencyCode = '@currencyCode';
+            const updateDiscount = () => {
+                const percentage = type.value === 'Percentage';
+                value.step = percentage ? '1' : '0.01';
+                value.max = percentage ? '100' : '99999999.99';
+                value.placeholder = percentage ? '1 to 100' : `${currencyCode} amount`;
+                discountHelp.textContent = percentage
+                    ? 'Enter a whole-number percentage from 1 to 100.'
+                    : `Enter a ${currencyCode} amount with up to two decimals.`;
+            };
+            type.addEventListener('change', updateDiscount);
+            updateDiscount();
+
+            const selectedInput = document.getElementById('SelectedCustomerIds');
+            const search = document.getElementById('promo-customer-search');
+            const results = document.getElementById('promo-customer-results');
+            const selectedBox = document.getElementById('promo-selected-customers');
+            const customerCount = document.getElementById('promo-customer-count');
+            const saveButton = document.getElementById('save-promo');
+            const audience = document.getElementById('AudienceType');
+            const manualSelection = document.getElementById('manual-customer-selection');
+            const audiencePreview = document.getElementById('promo-audience-preview');
+            let previewCount = null;
+            let previewTooMany = false;
+            let previewRequest = 0;
+            const selected = new Map((selectedInput.value || '').split(',').filter(Boolean)
+                .map(id => [id, `Customer ID ${id}`]));
+            const updateButton = () => {
+                if (audience.value === 'Selected')
+                    saveButton.textContent = selected.size ? `Save and issue ${selected.size} code${selected.size === 1 ? '' : 's'}` : 'Save promo master';
+                else
+                    saveButton.textContent = previewCount === null ? 'Save and issue audience codes' : `Save and issue ${previewCount} code${previewCount === 1 ? '' : 's'}`;
+                saveButton.disabled = audience.value !== 'Selected' && (previewCount === 0 || previewTooMany);
+            };
+            const renderSelected = () => {
+                selectedInput.value = [...selected.keys()].join(',');
+                customerCount.textContent = `${selected.size} of 50 customers selected. Each receives a separate code.`;
+                updateButton();
+                selectedBox.replaceChildren();
+                for (const [id, label] of selected) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn btn-sm btn-outline-secondary';
+                    button.textContent = `${label} ×`;
+                    button.setAttribute('aria-label', `Remove ${label}`);
+                    button.addEventListener('click', () => { selected.delete(id); renderSelected(); });
+                    selectedBox.append(button);
+                }
+            };
+            renderSelected();
+            const updateAudience = async () => {
+                const request = ++previewRequest;
+                const chosen = audience.value;
+                manualSelection.hidden = chosen !== 'Selected';
+                audiencePreview.hidden = chosen === 'Selected';
+                previewCount = null;
+                previewTooMany = false;
+                updateButton();
+                if (chosen === 'Selected') return;
+                audiencePreview.textContent = 'Checking matching active customers…';
+                try {
+                    const response = await fetch('@Url.Action("PreviewAudience")?audienceType=' + encodeURIComponent(chosen));
+                    if (!response.ok) throw new Error('Preview unavailable');
+                    const preview = await response.json();
+                    if (request !== previewRequest) return;
+                    previewTooMany = preview.tooMany;
+                    previewCount = preview.tooMany ? null : preview.customerCount;
+                    audiencePreview.textContent = preview.tooMany
+                        ? 'More than 20,000 customers match. Choose a narrower audience.'
+                        : `${preview.customerCount} active customer${preview.customerCount === 1 ? '' : 's'} match. Each will receive a unique code.`;
+                    updateButton();
+                } catch {
+                    if (request === previewRequest) audiencePreview.textContent = 'Audience preview unavailable. Check the database connection.';
+                }
+            };
+            audience.addEventListener('change', updateAudience);
+            updateAudience();
+            let timer;
+            search.addEventListener('input', () => {
+                clearTimeout(timer);
+                results.replaceChildren();
+                const query = search.value.trim();
+                if (query.length < 2) return;
+                timer = setTimeout(async () => {
+                    try {
+                        const response = await fetch('@Url.Action("SearchCustomers")?q=' + encodeURIComponent(query));
+                        if (!response.ok || search.value.trim() !== query) return;
+                        const customers = await response.json();
+                        results.replaceChildren();
+                        for (const customer of customers) {
+                            const id = String(customer.id);
+                            if (selected.has(id)) continue;
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.className = 'list-group-item list-group-item-action';
+                            button.textContent = `${customer.name} · ${customer.mobileNo} · ID ${id}`;
+                            button.addEventListener('click', () => {
+                                if (selected.size >= 50) { customerCount.textContent = 'Maximum 50 customers.'; return; }
+                                selected.set(id, `${customer.name} · ${customer.mobileNo} · ID ${id}`);
+                                renderSelected();
+                                search.value = '';
+                                results.replaceChildren();
+                            });
+                            results.append(button);
+                        }
+                    } catch { results.replaceChildren(); }
+                }, 250);
+            });
+            const notify = document.getElementById('SendNotification');
+            const editNotification = document.getElementById('edit-promo-notification');
+            const notificationModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('promo-notification-editor'));
+            const notificationTitle = document.getElementById('NotificationTitle');
+            const notificationMessage = document.getElementById('NotificationMessage');
+            const notificationTokens = [
+                { token: '{name}', label: 'Customer name', example: 'Safwan' },
+                { token: '{discount}', label: 'Discount', example: `${currencyCode} 50.00 off` },
+                { token: '{expiry}', label: 'Expiry date', example: '25 Nov 2026' }
+            ];
+            const bindTokenSuggestions = (field, menu) => {
+                let matches = [];
+                let activeIndex = 0;
+                const tokenAtCaret = () => {
+                    if (field.selectionStart !== field.selectionEnd) return null;
+                    const before = field.value.slice(0, field.selectionStart);
+                    const start = before.lastIndexOf('{');
+                    if (start < 0) return null;
+                    const query = before.slice(start + 1);
+                    return /^[a-z]*$/i.test(query) ? { start, end: field.selectionStart, query: query.toLowerCase() } : null;
+                };
+                const hide = () => {
+                    menu.hidden = true;
+                    menu.classList.add('d-none');
+                    field.setAttribute('aria-expanded', 'false');
+                    field.removeAttribute('aria-activedescendant');
+                };
+                const highlight = () => {
+                    [...menu.children].forEach((option, index) => {
+                        option.classList.toggle('active', index === activeIndex);
+                        option.setAttribute('aria-selected', String(index === activeIndex));
+                    });
+                    field.setAttribute('aria-activedescendant', menu.children[activeIndex].id);
+                };
+                const insert = token => {
+                    const location = tokenAtCaret();
+                    if (!location) return;
+                    const newLength = field.value.length - (location.end - location.start) + token.length;
+                    if (newLength > field.maxLength) return;
+                    field.setRangeText(token, location.start, location.end, 'end');
+                    hide();
+                    field.focus();
+                    field.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+                const update = () => {
+                    const location = tokenAtCaret();
+                    matches = location ? notificationTokens.filter(item =>
+                        item.token.slice(1, -1).startsWith(location.query) ||
+                        item.label.toLowerCase().includes(location.query)) : [];
+                    menu.replaceChildren();
+                    if (!matches.length) { hide(); return; }
+                    activeIndex = 0;
+                    for (const [index, item] of matches.entries()) {
+                        const option = document.createElement('button');
+                        option.id = `${menu.id}-option-${index}`;
+                        option.type = 'button';
+                        option.className = 'list-group-item list-group-item-action text-start';
+                        option.setAttribute('role', 'option');
+                        option.textContent = `${item.label}  ${item.token}  ·  ${item.example}`;
+                        option.addEventListener('mousedown', event => event.preventDefault());
+                        option.addEventListener('click', () => insert(item.token));
+                        menu.append(option);
+                    }
+                    highlight();
+                    menu.hidden = false;
+                    menu.classList.remove('d-none');
+                    field.setAttribute('aria-expanded', 'true');
+                };
+                field.addEventListener('input', update);
+                field.addEventListener('click', update);
+                field.addEventListener('keyup', event => {
+                    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) update();
+                });
+                field.addEventListener('keydown', event => {
+                    if (menu.hidden) return;
+                    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        activeIndex = (activeIndex + (event.key === 'ArrowDown' ? 1 : -1) + matches.length) % matches.length;
+                        highlight();
+                    } else if (event.key === 'Enter' || event.key === 'Tab') {
+                        event.preventDefault();
+                        insert(matches[activeIndex].token);
+                    } else if (event.key === 'Escape') {
+                        event.preventDefault();
+                        hide();
+                    }
+                });
+                field.addEventListener('blur', () => setTimeout(hide, 150));
+            };
+            bindTokenSuggestions(notificationTitle, document.getElementById('notification-title-suggestions'));
+            bindTokenSuggestions(notificationMessage, document.getElementById('notification-message-suggestions'));
+            const validity = document.getElementById('ValidityDate');
+            const previewExpiry = () => validity.value
+                ? new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                    .format(new Date(`${validity.value}T00:00:00`)) : 'the selected date';
+            const renderTemplate = text => text.replace(/\{name\}/gi, 'Safwan')
+                .replace(/\{discount\}/gi, type.value === 'Percentage' ? `${value.value || '10'}% off` : `${currencyCode} ${value.value || '50.00'} off`)
+                .replace(/\{expiry\}/gi, previewExpiry());
+            const updateNotificationPreview = () => {
+                document.getElementById('promo-notification-title-preview').textContent = renderTemplate(notificationTitle.value);
+                document.getElementById('promo-notification-message-preview').textContent = renderTemplate(notificationMessage.value);
+            };
+            [notificationTitle, notificationMessage, type, value, validity].forEach(input => input.addEventListener('input', updateNotificationPreview));
+            updateNotificationPreview();
+            const updateNotify = () => { editNotification.hidden = !notify.checked; };
+            notify.addEventListener('change', () => {
+                updateNotify();
+                if (notify.checked) notificationModal.show();
+            });
+            editNotification.addEventListener('click', () => notificationModal.show());
+            updateNotify();
+            if ([...document.querySelectorAll('#promo-notification-editor .text-danger')].some(x => x.textContent.trim()))
+                notificationModal.show();
+        })();
+    </script>
+}

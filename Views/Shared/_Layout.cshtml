@@ -1,0 +1,122 @@
+@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentType = Context.Request.Query["type"].ToString();
+    var currentGroupCode = await GroupAudience.GetConfiguredGroupCodeAsync(Context.RequestAborted);
+    var currentPushEnvironment = await GroupAudience.GetConfiguredPushEnvironmentAsync(Context.RequestAborted);
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · Al Qabayel Discount Center Admin</title>
+    <link rel="icon" type="image/jpeg" href="~/images/al-qabayel-discount-center.jpg" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/campaigns.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin-redesign.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/myqabayel-theme.css" asp-append-version="true" />
+</head>
+<body>
+<a class="mq-skip-link" href="#main-content">Skip to content</a>
+<div class="app-shell">
+    <aside class="sidebar">
+        <a class="brand" asp-controller="Dashboard" asp-action="Index">
+            <span class="myqabayel-mark"><img src="~/images/al-qabayel-discount-center.jpg" alt="" /></span>
+            <span><b>MY QABAYEL</b><small>DISCOUNT CENTER · ADMIN</small></span>
+        </a>
+        <div class="nav-label">WORKSPACE</div>
+        <nav class="nav flex-column gap-1" aria-label="Main navigation">
+            <a class="nav-link @(currentController == "Dashboard" ? "active" : "")" asp-controller="Dashboard" asp-action="Index">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+                <span>Dashboard</span>
+            </a>
+            <div class="nav-label mq-nav-group">CONTENT &amp; CAMPAIGNS</div>
+            <a class="nav-link @(currentController == "Campaigns" && currentType == "Flyer" ? "active" : "")" asp-controller="Campaigns" asp-action="Index" asp-route-type="Flyer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /><path d="M14 3v5h5M8 12h8M8 16h8" /></svg>
+                <span>Flyers</span>
+            </a>
+            <a class="nav-link @(currentController == "Campaigns" && currentType == "Offer" ? "active" : "")" asp-controller="Campaigns" asp-action="Index" asp-route-type="Offer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 12 12 3h8a1 1 0 0 1 1 1v8l-9 9-9-9Z" /><circle cx="16.5" cy="7.5" r="1.5" /></svg>
+                <span>Special Offers</span>
+            </a>
+            <a class="nav-link @(currentController == "Campaigns" && currentType == "Advertisement" ? "active" : "")" asp-controller="Campaigns" asp-action="Index" asp-route-type="Advertisement">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4M7 9h10" /></svg>
+                <span>Advertisements</span>
+            </a>
+            <a class="nav-link @(currentController == "Notifications" ? "active" : "")" asp-controller="Notifications" asp-action="Index">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" /></svg>
+                <span>App Notifications</span>
+            </a>
+            <a class="nav-link @(currentController == "Engagement" ? "active" : "")" asp-controller="Engagement" asp-action="Index">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-2 2v-9.5a7.5 7.5 0 1 1 17 0Z" /><path d="M8 10h8M8 14h5" /></svg>
+                <span>Customer Engagement</span>
+            </a>
+            <div class="nav-label mq-nav-group">OPERATIONS</div>
+            <a class="nav-link @(currentController == "NotificationSettings" ? "active" : "")" asp-controller="NotificationSettings" asp-action="Index">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9 7 7m10 10 2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" /></svg>
+                <span>Push Settings</span>
+            </a>
+            <div class="nav-label mq-nav-group">CUSTOMERS</div>
+            <a class="nav-link @(currentController == "Customers" ? "active" : "")" asp-controller="Customers" asp-action="Index">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3" /><path d="M3 20v-2a6 6 0 0 1 12 0v2H3ZM16 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5v1h-3" /></svg>
+                <span>Customers &amp; Points</span>
+            </a>
+            <a class="nav-link @(currentController == "CustomerPromoCodes" ? "active" : "")" asp-controller="CustomerPromoCodes" asp-action="Index">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 12 12 3h8a1 1 0 0 1 1 1v8l-9 9-9-9Z" /><circle cx="16.5" cy="7.5" r="1.5" /></svg>
+                <span>Customer PromoCodes</span>
+            </a>
+            <div class="nav-label mq-nav-group">SETTINGS</div>
+            <a class="nav-link @(currentController == "Settings" ? "active" : "")" asp-controller="Settings" asp-action="Index">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9 7 7m10 10 2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" /></svg>
+                <span>Loyalty Settings</span>
+            </a>
+            <a class="nav-link @(currentController == "AppContentLinks" ? "active" : "")" asp-controller="AppContentLinks" asp-action="Index">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1 0l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1" /></svg>
+                <span>Mobile App Links</span>
+            </a>
+            <a class="nav-link @(currentController == "Account" ? "active" : "")" asp-controller="Account" asp-action="ChangePassword">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+                <span>Change Password</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <span class="sidebar-footer-icon">✦</span>
+            <div><b>Loyalty workspace</b><small>@currentGroupCode · @currentPushEnvironment</small></div>
+        </div>
+    </aside>
+
+    <div class="main-area">
+        <header class="topbar">
+            <div class="topbar-title">
+                <span>MY QABAYEL / ADMIN</span>
+                <strong>@ViewData["Title"]</strong>
+            </div>
+            <form class="mq-top-search" asp-controller="Customers" asp-action="Index" method="get" role="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
+                <input type="search" name="search" placeholder="Search customers" aria-label="Search customers" />
+                <span aria-hidden="true">↵</span>
+            </form>
+            <div class="topbar-actions">
+                <a class="btn btn-centro topbar-create" asp-controller="Campaigns" asp-action="Create"><span aria-hidden="true">＋</span> New campaign</a>
+                <div class="user-chip"><span class="user-avatar" aria-hidden="true">A</span><span><b>Administrator</b><small>@User.Identity?.Name</small></span></div>
+                <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <button class="signout-button" type="submit" title="Sign out">Sign out</button>
+                </form>
+            </div>
+        </header>
+        <main id="main-content" class="page-content">
+            @if (TempData["Success"] is string message) { <div class="alert alert-success">@message</div> }
+            @if (TempData["Error"] is string errorMessage) { <div class="alert alert-danger">@errorMessage</div> }
+            @RenderBody()
+        </main>
+    </div>
+</div>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

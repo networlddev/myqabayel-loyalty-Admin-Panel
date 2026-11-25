@@ -1,0 +1,83 @@
+@model PromoIssueViewModel
+@inject QabayelMall.API.Services.LoyaltyCurrencyService CurrencyService
+@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@{
+    ViewData["Title"] = "Issue Customer PromoCode";
+    var currencyCode = await CurrencyService.GetCodeAsync(
+        await GroupAudience.GetConfiguredGroupCodeAsync(Context.RequestAborted), Context.RequestAborted);
+}
+
+<div class="form-card">
+    <span class="eyebrow">@Model.Promo?.CampaignCode</span>
+    <h1>Issue customer PromoCode</h1>
+    <p class="text-muted">@Model.Promo?.Name · Valid through @Model.Promo?.Validity.ToString("dd MMM yyyy, h:mm tt")</p>
+    <form asp-action="Issue" method="post" enctype="multipart/form-data" class="row g-3 mt-2">
+        @Html.AntiForgeryToken()
+        <input asp-for="PromoId" type="hidden"/>
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="col-12">
+            <label for="customerSearch" class="form-label">Active loyalty customer</label>
+            <input id="customerSearch" class="form-control" autocomplete="off" placeholder="Search by customer ID, name or phone" value="@(Model.Customer is null ? "" : $"{Model.Customer.Name} · {Model.Customer.MobileNo}")" />
+            <input asp-for="CustomerId" type="hidden"/>
+            <span asp-validation-for="CustomerId" class="text-danger"></span>
+            <div id="customerResults" class="list-group mt-2"></div>
+            <div id="selectedCustomer" class="form-text">@(Model.Customer is null ? "Choose a customer from the search results." : $"Selected: {Model.Customer.Name} (ID {Model.Customer.Id})")</div>
+        </div>
+        <div class="col-md-6"><label asp-for="DiscountType" class="form-label">Discount type</label><select asp-for="DiscountType" class="form-select"><option value="Amount">Fixed @currencyCode amount</option><option value="Percentage">Whole-number percentage</option></select></div>
+        <div class="col-md-6"><label asp-for="Value" class="form-label">Discount value</label><input asp-for="Value" class="form-control" type="number" min="0.01" step="0.01"/><span asp-validation-for="Value" class="text-danger"></span><div class="form-text">For percentage, enter a whole number from 1 to 100.</div></div>
+        <div class="col-12 form-check ms-2"><input asp-for="SendNotification" class="form-check-input"/><label asp-for="SendNotification" class="form-check-label"></label><div class="form-text">The message includes the discount and directs the customer to the barcode in the app. Push delivery needs a registered device.</div></div>
+        <div class="col-md-6" id="notification-environment-field" hidden><label asp-for="NotificationEnvironment" class="form-label"></label><input asp-for="NotificationEnvironment" type="hidden"/><div class="form-control-plaintext">@Model.NotificationEnvironment · <a asp-controller="Settings" asp-action="Index">Change in Loyalty Settings</a></div></div>
+        <div class="col-12" id="notification-image-field" hidden><label asp-for="NotificationImageUpload" class="form-label">Notification image (optional)</label><input asp-for="NotificationImageUpload" class="form-control" type="file" accept="image/jpeg,image/png,image/webp"/><span asp-validation-for="NotificationImageUpload" class="text-danger"></span><div class="form-text">Choose an image here, or use the campaign image when available. Maximum 5 MB.</div>
+            <label asp-for="NotificationImageHttpsUrl" class="form-label mt-2">Public HTTPS image URL (optional)</label><input asp-for="NotificationImageHttpsUrl" class="form-control" type="url" placeholder="https://example.com/promo.jpg"/><span asp-validation-for="NotificationImageHttpsUrl" class="text-danger"></span><div class="form-text">A public HTTPS URL allows the image to appear inside the phone's push notification.</div>
+            @if (!string.IsNullOrWhiteSpace(Model.CampaignImageUrl)) { <img src="@Model.CampaignImageUrl" alt="Campaign image" class="mt-2" style="max-width:180px;max-height:120px;object-fit:contain"/> }
+        </div>
+        <div class="col-12 d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.PromoId">Cancel</a><button class="btn btn-centro" type="submit">Issue &amp; show barcode</button></div>
+    </form>
+</div>
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+<script>
+(() => {
+  const sendNotification = document.getElementById('SendNotification');
+  const environmentField = document.getElementById('notification-environment-field');
+  const imageField = document.getElementById('notification-image-field');
+  const showEnvironment = () => { environmentField.hidden = !sendNotification.checked; imageField.hidden = !sendNotification.checked; };
+  sendNotification.addEventListener('change', showEnvironment);
+  showEnvironment();
+  const search = document.getElementById('customerSearch');
+  const customerId = document.getElementById('CustomerId');
+  const results = document.getElementById('customerResults');
+  const selected = document.getElementById('selectedCustomer');
+  let timer;
+  search.addEventListener('input', () => {
+    customerId.value = '';
+    selected.textContent = 'Choose a customer from the search results.';
+    results.replaceChildren();
+    clearTimeout(timer);
+    if (search.value.trim().length < 2) return;
+    timer = setTimeout(async () => {
+      try {
+        const response = await fetch('@Url.Action("SearchCustomers")?q=' + encodeURIComponent(search.value.trim()));
+        if (!response.ok) return;
+        const customers = await response.json();
+        results.replaceChildren();
+        for (const customer of customers) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'list-group-item list-group-item-action';
+          button.textContent = `${customer.name} · ${customer.mobileNo} · ID ${customer.id}`;
+          button.addEventListener('click', () => {
+            customerId.value = customer.id;
+            search.value = `${customer.name} · ${customer.mobileNo}`;
+            selected.textContent = `Selected: ${customer.name} (ID ${customer.id})`;
+            results.replaceChildren();
+          });
+          results.append(button);
+        }
+        if (!customers.length) selected.textContent = 'No active customer found in this loyalty group.';
+      } catch { selected.textContent = 'Customer search is unavailable. Try again.'; }
+    }, 250);
+  });
+})();
+</script>
+}

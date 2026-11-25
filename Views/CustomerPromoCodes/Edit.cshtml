@@ -1,0 +1,170 @@
+@model PromoEditViewModel
+@inject QabayelMall.API.Services.LoyaltyCurrencyService CurrencyService
+@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@{
+    ViewData["Title"] = "Edit Customer PromoCode";
+    var currencyCode = await CurrencyService.GetCodeAsync(
+        await GroupAudience.GetConfiguredGroupCodeAsync(Context.RequestAborted), Context.RequestAborted);
+}
+
+<div class="form-card">
+    <span class="eyebrow">CUSTOMER PROMOCODE</span>
+    <h1>Edit promo master</h1>
+    <p class="text-muted">Campaign @Model.CampaignCode</p>
+    @if (Model.DraftSavedAtUtc.HasValue)
+    {
+        <div class="alert alert-info">Draft saved @DateTime.SpecifyKind(Model.DraftSavedAtUtc.Value, DateTimeKind.Utc).ToLocalTime().ToString("dd MMM yyyy, h:mm tt"). Review it below, then choose Apply changes when ready. The draft has not changed live codes.</div>
+    }
+    <div class="small text-muted mb-2">Name, caption, and description belong to the shared campaign and will also appear updated in its history. Redeemed customer vouchers keep their own discount and expiry. Previously sent app notifications keep their original text.</div>
+
+    @if (Model.UnchangedCodes.Count > 0)
+    {
+        <div class="alert alert-warning">
+            <strong>@Model.UnchangedCodes.Count customer code(s) have already been redeemed or revoked.</strong>
+            Their discount and voucher expiry will not change. @Model.UnusedCount unused code(s) will receive the new validity and, if entered, the new discount.
+            <details class="mt-2">
+                <summary>Show customers whose codes will not change</summary>
+                <ul class="mb-0 mt-2">
+                    @foreach (var code in Model.UnchangedCodes.Take(30))
+                    {
+                        <li>@code.CustomerName (ID @code.CustomerId) — @code.Status</li>
+                    }
+                </ul>
+                @if (Model.UnchangedCodes.Count > 30) { <div class="small mt-1">Showing 30 of @Model.UnchangedCodes.Count. See all on the Details page.</div> }
+            </details>
+        </div>
+    }
+    else if (Model.UnusedCount > 0)
+    {
+        <div class="alert alert-info">@Model.UnusedCount unused customer code(s) will receive the new validity and, if entered, the new discount.</div>
+    }
+
+    <form asp-action="Edit" method="post" enctype="multipart/form-data" class="row g-3 mt-2">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="CanEditDepartments" type="hidden" />
+        <input asp-for="CustomerChangesJson" type="hidden" />
+        <input asp-for="OriginalAssignmentsJson" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="col-md-6"><label asp-for="Name" class="form-label">Name</label><input asp-for="Name" class="form-control"/><span asp-validation-for="Name" class="text-danger"></span></div>
+        <div class="col-md-6"><label class="form-label">Campaign identifier</label><input value="@Model.CampaignCode" class="form-control" readonly/><div class="form-text">The identifier stays fixed so existing issued codes remain linked to this campaign.</div></div>
+        <div class="col-12"><label asp-for="Caption" class="form-label">Caption</label><input asp-for="Caption" class="form-control"/><span asp-validation-for="Caption" class="text-danger"></span></div>
+        <div class="col-12"><label asp-for="Body" class="form-label">Description</label><textarea asp-for="Body" class="form-control" rows="3"></textarea><span asp-validation-for="Body" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="ValidityDate" class="form-label">Last valid day</label><input asp-for="ValidityDate" type="date" class="form-control"/><span asp-validation-for="ValidityDate" class="text-danger"></span><div class="form-text">Changes the expiry of unused vouchers. Saved as 11:59:59 PM on this day.</div></div>
+        <div class="col-12"><label asp-for="ImageUpload" class="form-label">Promo image (optional)</label><input asp-for="ImageUpload" class="form-control" type="file" accept="image/jpeg,image/png,image/webp"/><span asp-validation-for="ImageUpload" class="text-danger"></span><div class="form-text">JPEG, PNG or WebP, up to 5 MB. A new image replaces the current image when you save.</div>
+            @if (!string.IsNullOrWhiteSpace(Model.ImageUrl)) { <div class="mt-2"><img src="@Model.ImageUrl" alt="Current promo image" style="max-width:180px;max-height:120px;object-fit:contain"/><label class="ms-2"><input asp-for="RemoveImage"/> Remove image</label></div> }
+        </div>
+        <div class="col-12 mt-4"><h2 class="h5 mb-1">Discount for unused customer codes</h2><p class="text-muted small mb-0">Leave the value empty to keep existing amounts and percentages. Enter a value to change every unused code in this campaign. Redeemed and revoked codes keep their original values.</p></div>
+        <div class="col-md-6"><label asp-for="DiscountType" class="form-label">Discount type</label><select asp-for="DiscountType" class="form-select"><option value="Amount">Fixed @currencyCode amount</option><option value="Percentage">Percentage</option></select><span asp-validation-for="DiscountType" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="DiscountValue" class="form-label">New amount or percentage (optional)</label><input asp-for="DiscountValue" class="form-control" type="number" min="0.01" step="0.01" placeholder="Leave empty to keep existing discounts"/><span asp-validation-for="DiscountValue" class="text-danger"></span></div>
+
+        <div class="col-12 mt-4">
+            <h2 class="h5 mb-1">Customer assignments</h2>
+            <p class="small text-muted">Search for a replacement customer beside an unused code. Applying the change keeps the same barcode and moves it to the replacement customer. A redeemed or revoked code cannot be reassigned.</p>
+            <span asp-validation-for="CustomerChangesJson" class="text-danger d-block"></span>
+            <div class="table-responsive border rounded" style="max-height:420px;overflow:auto">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>Barcode</th><th>Current customer</th><th>Status</th><th>Replace with</th></tr></thead>
+                    <tbody>
+                    @foreach (var code in Model.Codes)
+                    {
+                        <tr data-voucher="@code.VoucherNo" data-current="@code.CustomerId">
+                            <td class="text-nowrap">Private</td>
+                            <td>@code.CustomerName <small class="text-muted">ID @code.CustomerId</small></td>
+                            <td>@code.Status</td>
+                            <td style="min-width:280px">
+                                @if (code.Status is "Issued" or "Expired")
+                                {
+                                    <div class="d-flex gap-2"><input class="form-control form-control-sm promo-reassign-search" autocomplete="off" placeholder="Search name, phone or ID" aria-label="Replacement customer for @code.CustomerName"/><button class="btn btn-sm btn-outline-secondary promo-reassign-clear" type="button">Clear</button></div>
+                                    <div class="promo-reassign-choice small text-muted mt-1">No change</div>
+                                    <div class="promo-reassign-results list-group"></div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">@((code.Status == "Redeemed") ? "Used by customer — cannot change" : "Revoked — cannot change")</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="col-12 mt-4">
+            <label class="form-label">Eligible departments</label>
+            @if (Model.CanEditDepartments)
+            {
+                <span asp-validation-for="DepartmentIds" class="text-danger d-block"></span>
+                <div class="row g-2 rounded border p-3" style="max-height:340px;overflow:auto">
+                    @foreach (var department in Model.AvailableDepartments)
+                    {
+                        <div class="col-md-4 col-lg-3"><label class="form-check-label d-flex align-items-start gap-2"><input class="form-check-input mt-1" type="checkbox" name="DepartmentIds" value="@department.Id" checked="@Model.DepartmentIds.Contains(department.Id)"/><span>@department.Name <small class="text-muted">(@department.Code)</small></span></label></div>
+                    }
+                </div>
+                <div class="form-text">Departments can be changed before the first customer code is issued.</div>
+            }
+            else
+            {
+                <div class="alert alert-light border mb-0">Department rules are locked after codes are issued. This keeps the same eligibility for every customer code in this campaign.</div>
+            }
+        </div>
+        <div class="col-12 mt-4 border rounded p-3">
+            <label class="form-check-label"><input asp-for="SendNotificationAgain" class="form-check-input me-2"/>Send app notification again after applying changes</label>
+            <div class="form-text">Sends the updated promo details to customers with an active, unused code. Redeemed and revoked codes are excluded. Saving a draft never sends a notification.</div>
+            <div class="mt-2"><label asp-for="NotificationEnvironment" class="form-label">Firebase environment</label><input asp-for="NotificationEnvironment" type="hidden"/><div class="form-control-plaintext">@Model.NotificationEnvironment · <a asp-controller="Settings" asp-action="Index">Change in Loyalty Settings</a></div></div>
+            <div class="mt-3"><label asp-for="NotificationImageUpload" class="form-label">Notification image (optional)</label><input asp-for="NotificationImageUpload" class="form-control" type="file" accept="image/jpeg,image/png,image/webp"/><span asp-validation-for="NotificationImageUpload" class="text-danger"></span><div class="form-text">Choose a different image for this notification. If left empty, the promo image above is used when available. Maximum 5 MB.</div>
+                <label asp-for="NotificationImageHttpsUrl" class="form-label mt-2">Public HTTPS image URL (optional)</label><input asp-for="NotificationImageHttpsUrl" class="form-control" type="url" placeholder="https://example.com/promo.jpg"/><span asp-validation-for="NotificationImageHttpsUrl" class="text-danger"></span><div class="form-text">Use a public HTTPS URL for a rich push image. Local uploads appear in the app when reachable.</div>
+                @if (!string.IsNullOrWhiteSpace(Model.NotificationImageUrl)) { <div class="mt-2"><img src="@Model.NotificationImageUrl" alt="Saved notification image" style="max-width:180px;max-height:120px;object-fit:contain"/><label class="ms-2"><input asp-for="RemoveNotificationImage"/> Remove saved notification image</label></div> }
+            </div>
+        </div>
+        <div class="col-12 d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">Cancel</a><button class="btn btn-outline-secondary" type="submit" name="saveMode" value="Draft">Save as draft</button><button class="btn btn-centro" type="submit" name="saveMode" value="Apply">Apply changes</button></div>
+    </form>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const input = document.getElementById('CustomerChangesJson');
+            let changes;
+            try { changes = JSON.parse(input.value || '{}'); } catch { changes = {}; }
+            const update = () => { input.value = JSON.stringify(changes); };
+            for (const row of document.querySelectorAll('tr[data-voucher]')) {
+                const search = row.querySelector('.promo-reassign-search');
+                if (!search) continue;
+                const code = row.dataset.voucher;
+                const results = row.querySelector('.promo-reassign-results');
+                const choice = row.querySelector('.promo-reassign-choice');
+                const showChoice = () => { choice.textContent = changes[code] ? `Replacement customer ID ${changes[code]}` : 'No change'; };
+                showChoice();
+                row.querySelector('.promo-reassign-clear').addEventListener('click', () => {
+                    delete changes[code]; search.value = ''; results.replaceChildren(); showChoice(); update();
+                });
+                let timer;
+                search.addEventListener('input', () => {
+                    clearTimeout(timer); results.replaceChildren();
+                    const query = search.value.trim();
+                    if (query.length < 2) return;
+                    timer = setTimeout(async () => {
+                        try {
+                            const response = await fetch('@Url.Action("SearchCustomers")?q=' + encodeURIComponent(query));
+                            if (!response.ok || search.value.trim() !== query) return;
+                            const customers = await response.json();
+                            results.replaceChildren();
+                            for (const customer of customers) {
+                                const button = document.createElement('button');
+                                button.type = 'button'; button.className = 'list-group-item list-group-item-action';
+                                button.textContent = `${customer.name} · ${customer.mobileNo} · ID ${customer.id}`;
+                                button.addEventListener('click', () => {
+                                    changes[code] = customer.id; update(); showChoice();
+                                    search.value = ''; results.replaceChildren();
+                                });
+                                results.append(button);
+                            }
+                        } catch { results.replaceChildren(); }
+                    }, 250);
+                });
+            }
+        })();
+    </script>
+}

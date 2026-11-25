@@ -1,0 +1,100 @@
+@model NotificationSettingsViewModel
+@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@inject IConfiguration Configuration
+@{ ViewData["Title"] = "Push Settings"; var activeEnvironment = await GroupAudience.GetConfiguredPushEnvironmentAsync(Context.RequestAborted); }
+
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <span class="eyebrow">APP NOTIFICATIONS</span>
+        <h1>Push settings</h1>
+        <p class="text-muted mb-0">Active Admin Panel environment: <strong>@activeEnvironment</strong>. <a asp-controller="Settings" asp-action="Index">Change in Loyalty Settings</a>. Configure credentials and iOS clients for both environments here.</p>
+    </div>
+    <a class="btn btn-outline-secondary" asp-controller="Notifications" asp-action="Index">Back to notifications</a>
+</div>
+
+<div class="alert alert-light border mb-4">
+    In <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">Firebase Console</a>, select the matching project,
+    then open <strong>Project settings → Service accounts → Generate new private key</strong>.
+    Upload that downloaded JSON file below. The Android <code>google-services.json</code> is a different file and will be rejected.
+    The private key is stored on this server outside <code>wwwroot</code> and excluded from Git.
+</div>
+
+<section class="panel p-4 mb-4">
+    <span class="eyebrow">ONE FIREBASE PROJECT</span>
+    <h2 class="h4">Use one file for Development and Production</h2>
+    <p class="text-muted">Upload the MY QABAYEL Firebase Admin SDK JSON once the private server paths and expected Firebase project IDs are configured for both environments.</p>
+    <form asp-action="Upload" method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="environment" value="Both" />
+        <div class="col-lg-8">
+            <label for="credential-both" class="form-label">Firebase service-account JSON</label>
+            <input id="credential-both" name="credentialFile" type="file" accept=".json,application/json" required class="form-control" />
+        </div>
+        <div class="col-lg-4"><button class="btn btn-centro" type="submit">Upload for both</button></div>
+    </form>
+</section>
+
+<div class="row g-4">
+    @foreach (var item in Model.Environments)
+    {
+        <div class="col-xl-6">
+            <section class="panel p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                    <h2 class="h4 mb-0">@item.Environment</h2>
+                    <span class="badge @(item.Status == "Configured" ? "bg-success" : item.Status == "Invalid" ? "bg-danger" : "bg-warning text-dark")">@item.Status</span>
+                </div>
+                <p class="text-muted">@item.Description</p>
+                <dl>
+                    <dt>Firebase project</dt>
+                    <dd>@(string.IsNullOrWhiteSpace(item.ProjectId) ? "Shown after upload" : item.ProjectId)</dd>
+                    <dt>Saved server path</dt>
+                    <dd class="small text-break"><code>@item.CredentialPath</code></dd>
+                </dl>
+                <form asp-action="Upload" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="environment" value="@item.Environment" />
+                    <label for="credential-@item.Environment" class="form-label">Firebase service-account JSON</label>
+                    <input id="credential-@item.Environment" name="credentialFile" type="file" accept=".json,application/json" required class="form-control mb-3" />
+                    <button class="btn btn-centro" type="submit">@(item.Status == "Configured" ? "Replace service account" : "Upload service account")</button>
+                </form>
+            </section>
+        </div>
+    }
+</div>
+
+<div class="row g-4 mt-1">
+    @foreach (var iosEnvironment in new[] { "Development", "Production" })
+    {
+        var ios = iosEnvironment == "Development" ? Model.DevelopmentIosClient : Model.ProductionIosClient;
+        var bundleId = Configuration[$"PushNotifications:{iosEnvironment}:Ios:BundleId"];
+        <div class="col-xl-6">
+            <section class="panel p-4 h-100">
+                <span class="eyebrow">IOS CLIENT CONFIGURATION</span>
+                <h2 class="h4">@iosEnvironment iOS app</h2>
+                <p class="text-muted">Upload the MY QABAYEL <code>GoogleService-Info.plist</code> after its Firebase project, app ID, sender ID, storage bucket, and bundle ID are configured on the server. The matching mobile API serves these values from <code>GET /api/Firebase/ClientConfiguration?platform=ios</code>.</p>
+                @if (string.IsNullOrWhiteSpace(bundleId)) { <div class="alert alert-warning">The @iosEnvironment iOS app identifiers have not been configured yet.</div> }
+                @if (ios is not null)
+                {
+                    <div class="alert alert-success">Configured for <strong>@ios.ProjectId</strong> · @ios.IosBundleId · updated @ios.UpdatedAtUtc.ToLocalTime().ToString("dd MMM yyyy, h:mm tt")</div>
+                }
+                else
+                {
+                    <div class="alert alert-warning">No @iosEnvironment iOS client file has been uploaded yet.</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(bundleId))
+                {
+                <form asp-action="UploadIosClient" method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="environment" value="@iosEnvironment" />
+                    <div class="col-lg-8"><label for="ios-client-@iosEnvironment" class="form-label">GoogleService-Info.plist</label><input id="ios-client-@iosEnvironment" name="iosPlist" type="file" accept=".plist,application/x-plist,application/xml,text/xml" required class="form-control" /></div>
+                    <div class="col-lg-4"><button class="btn btn-centro" type="submit">@(ios is null ? "Upload iOS client file" : "Replace iOS client file")</button></div>
+                </form>
+                }
+            </section>
+        </div>
+    }
+</div>
+<p class="form-text mt-2">The API key is returned to authenticated app requests but is not shown here. The uploaded plist file is discarded after its client settings are saved.</p>
+
+<p class="text-muted small mt-4">The individual upload forms above remain available if you later use different Firebase projects. Uploading a key configures the sender; a real Flutter FCM token registered with the mobile API is still required for a delivery test. Both Flutter app variants must belong to the Firebase project used here.</p>
+<p class="text-muted small">Published notifications that are already due and marked Pending may begin sending after a matching service account is uploaded.</p>

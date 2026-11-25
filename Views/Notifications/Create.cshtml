@@ -1,0 +1,357 @@
+@using QabayelMall.API.Services
+@model LoyaltyNotificationCreateViewModel
+@{ ViewData["Title"] = "Create Notification"; }
+<div class="mb-4"><span class="eyebrow">LOYALTY MESSAGING</span><h1>Create notification</h1><p class="text-muted">Write a message and preview how it will appear in the app.</p></div>
+<div class="alert alert-light border">Loyalty group: <strong>@ViewData["GroupCode"]</strong></div>
+<div class="alert @(Equals(ViewData[$"{Model.Environment}PushReady"], true) ? "alert-success" : "alert-warning")">
+    @Model.Environment push: <strong>@(Equals(ViewData[$"{Model.Environment}PushReady"], true) ? "Configured" : "Service account needed")</strong>.
+    A notification can be saved while push is unavailable; delivery stays pending. <a asp-controller="NotificationSettings" asp-action="Index">Open Push Settings</a>.
+</div>
+@if (ViewData["DeviceAvailability"] is IReadOnlyDictionary<string, ActiveDeviceAvailability> activeDevices)
+{
+    var active = activeDevices.GetValueOrDefault(Model.Environment);
+    <div class="alert @(active?.DeviceCount == 0 ? "alert-warning" : "alert-light border")">
+        Active @Model.Environment FCM devices in this group: <strong>@(active?.DeviceCount ?? 0)</strong>.
+        You can save a draft now; a device must register before it can receive push.
+    </div>
+}
+<div class="row g-4">
+<div class="col-xl-7">
+<form asp-action="Create" method="post" enctype="multipart/form-data" class="panel p-4">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <div class="row g-3">
+        <div class="col-12">
+            <label asp-for="Title" class="form-label"></label>
+            <div class="position-relative">
+                <input asp-for="Title" class="form-control" placeholder="Weekend offer is now live" aria-autocomplete="list" aria-controls="title-token-suggestions" aria-expanded="false"/>
+                <div id="title-token-suggestions" class="list-group notification-token-suggestions" role="listbox" hidden>
+                    <button type="button" class="list-group-item list-group-item-action" role="option"><strong>{CustomerName}</strong><span class="d-block small text-muted">Customer name</span></button>
+                </div>
+            </div>
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+        <div class="col-12">
+            <label asp-for="Message" class="form-label"></label>
+            <div class="position-relative">
+                <textarea asp-for="Message" class="form-control" rows="4" placeholder="Hi {CustomerName}, open the My Qabayel app to see today's special offer." aria-autocomplete="list" aria-controls="message-token-suggestions" aria-expanded="false"></textarea>
+                <div id="message-token-suggestions" class="list-group notification-token-suggestions" role="listbox" hidden>
+                    <button type="button" class="list-group-item list-group-item-action" role="option"><strong>{CustomerName}</strong><span class="d-block small text-muted">Customer name</span></button>
+                </div>
+            </div>
+            <div class="form-text">Type <code>{</code> to select Customer name. <button type="button" id="insert-customer-name" class="btn btn-link btn-sm p-0 align-baseline">Insert customer name in message</button>. Maximum 500 characters.</div>
+            <span asp-validation-for="Message" class="text-danger"></span>
+        </div>
+        <div class="col-md-6"><label asp-for="ScheduledAt" class="form-label"></label><input asp-for="ScheduledAt" class="form-control" type="datetime-local"/><span asp-validation-for="ScheduledAt" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="ExpiresAt" class="form-label"></label><input asp-for="ExpiresAt" class="form-control" type="datetime-local"/><span asp-validation-for="ExpiresAt" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="Environment" class="form-label"></label><input asp-for="Environment" type="hidden"/><div class="form-control-plaintext fw-semibold">@Model.Environment · <a asp-controller="Settings" asp-action="Index">Change in Loyalty Settings</a></div></div>
+        <div class="col-md-6"><label asp-for="AudienceType" class="form-label"></label><select asp-for="AudienceType" class="form-select"><option value="All">All customers in this loyalty group</option><option value="Selected">Find and select customers</option><option value="NeverPurchased">Customers who have never purchased</option><option value="NoPurchase30">No recorded purchase in 30 days</option><option value="NoPurchase60">No recorded purchase in 60 days</option><option value="NoPurchase90">No recorded purchase in 90 days</option></select><span asp-validation-for="AudienceType" class="text-danger"></span></div>
+        <div class="col-12" id="selected-customers-field">
+            <label for="customer-search" class="form-label">Find a customer</label>
+            <input id="customer-search" class="form-control" autocomplete="off" data-url="@Url.Action("SearchCustomers")" placeholder="Search by name, mobile number, or customer ID"/>
+            <div id="customer-search-results" class="list-group mt-2" role="status" aria-live="polite"></div>
+            <label asp-for="SelectedCustomerIds" class="form-label mt-2"></label>
+            <input asp-for="SelectedCustomerIds" class="form-control" placeholder="Chosen customer IDs appear here"/>
+            <div class="form-text">Choose up to 200 customers. You can also enter IDs separated by commas.</div>
+            <div id="selected-customer-details" class="small mt-2" aria-live="polite"></div>
+            <span asp-validation-for="SelectedCustomerIds" class="text-danger"></span>
+        </div>
+        <div class="col-12" id="no-purchase-audience" data-url="@Url.Action("PreviewAudience")" role="status" aria-live="polite" hidden>
+            <div class="alert alert-light border mb-0"><strong id="no-purchase-count">Checking customers…</strong><div class="small mt-1">Based on recorded purchases in ZWCORE, not physical mall visits. For 30/60/90-day options, recently registered customers are excluded. Matching customers are selected when this notification is saved.</div></div>
+        </div>
+        <div class="col-12"><label asp-for="LinkedCampaignId" class="form-label"></label><select asp-for="LinkedCampaignId" asp-items="Model.CampaignOptions" class="form-select"><option value="">Open notification history</option></select><div class="form-text">Link a published offer, flyer or advertisement so the app can open it when tapped. Linking does not require an image.</div><span asp-validation-for="LinkedCampaignId" class="text-danger"></span></div>
+        <div class="col-12"><div class="border rounded p-3"><strong>Image (optional)</strong><div class="form-text mb-2">Leave this section empty to send a simple text notification. Title and message are enough.</div>
+            <div id="linked-campaign-image-choice" class="form-check mb-2" hidden><input asp-for="UseLinkedCampaignImage" class="form-check-input"/><label asp-for="UseLinkedCampaignImage" class="form-check-label"></label></div>
+            <label asp-for="Images" class="form-label">Upload image</label><input asp-for="Images" class="form-control" type="file" accept="image/jpeg,image/png,image/webp" multiple/><div class="form-text">Optional. Up to five JPEG, PNG or WebP images, maximum 5 MB each.</div><span asp-validation-for="Images" class="text-danger"></span>
+            <details class="mt-2"><summary class="small">Use an image URL instead</summary><label asp-for="ImageUrl" class="form-label mt-2">Public HTTPS image URL</label><input asp-for="ImageUrl" class="form-control" type="url" placeholder="https://example.com/offer.jpg"/><div class="form-text">A public HTTPS image can also appear in the phone's push notification.</div><span asp-validation-for="ImageUrl" class="text-danger"></span></details>
+        </div></div>
+        <div class="col-12 form-check ms-2"><input asp-for="PublishNow" class="form-check-input"/><label asp-for="PublishNow" class="form-check-label"></label><div class="form-text">Leave unchecked to save as a draft. Later choose Go live now on the notification list. Check it to publish at the selected date and time.</div></div>
+        <div class="col-12 d-flex gap-2"><button class="btn btn-centro" type="submit">Save notification</button><a class="btn btn-outline-secondary" asp-action="Index">Cancel</a></div>
+    </div>
+</form>
+</div>
+<div class="col-xl-5">
+    <div class="panel p-4 notification-preview-panel">
+        <span class="eyebrow">LIVE DEMO</span><h2 class="h4 mb-1">Customer view</h2>
+        <p class="text-muted small">The preview updates as you type. Appearance varies by phone and Flutter app.</p>
+        <div class="alert alert-light border small py-2" id="preview-customer-details" aria-live="polite">Example recipient: Sample Customer</div>
+        <div class="notification-device">
+            <div class="notification-device-label">PUSH · <span id="preview-environment">DEVELOPMENT</span></div>
+            <div class="notification-push-card">
+                <div class="notification-push-brand"><span class="notification-brand-icon">✦</span><strong>Al Qabayel Discount Center</strong><span>now</span></div>
+                <div class="notification-push-content"><div><strong id="preview-push-title">Your notification title</strong><p id="preview-push-message">Your message will appear here.</p></div><img id="preview-push-image" alt="Primary push image" hidden /></div>
+            </div>
+            <div class="notification-device-label mt-4">IN APP NOTIFICATION</div>
+            <div class="notification-app-card">
+                <div class="notification-app-image-wrap" id="preview-app-image-wrap"><img id="preview-app-image" alt="Selected notification image" hidden /><span id="preview-image-count" hidden></span></div>
+                <div class="notification-gallery-thumbs" id="preview-gallery-thumbs"></div>
+                <div class="notification-app-copy"><strong id="preview-app-title">Your notification title</strong><p id="preview-app-message">Your message will appear here.</p><small id="preview-app-target">Opens notification history</small></div>
+            </div>
+        </div>
+        <p class="text-muted small mt-3 mb-0">Text-only notifications work without an image. When you add images, Flutter can show them from <code>LoadNotifications.imageUrls</code>.</p>
+    </div>
+</div>
+</div>
+<style>
+    .notification-token-suggestions { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; box-shadow: 0 .5rem 1rem rgba(0,0,0,.12); }
+    .notification-token-suggestions[hidden] { display: none; }
+    .notification-preview-panel { position: sticky; top: 1rem; }
+    .notification-device { padding: 1.1rem; border: 1px solid #e4d9db; border-radius: 1.25rem; background: linear-gradient(160deg,#f8f3f3,#e8e1e1); }
+    .notification-device-label { font-size: .68rem; font-weight: 800; letter-spacing: .13em; color: #7f5d64; margin-bottom: .65rem; }
+    .notification-push-card, .notification-app-card { background: #fff; border: 1px solid #eadfe1; border-radius: .85rem; box-shadow: 0 10px 25px rgba(66,22,33,.08); overflow: hidden; }
+    .notification-push-card { padding: .8rem; }
+    .notification-push-brand { display: flex; align-items: center; gap: .45rem; font-size: .76rem; margin-bottom: .45rem; }
+    .notification-push-brand span:last-child { margin-left: auto; color: #8f8788; font-size: .69rem; }
+    .notification-brand-icon { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: .35rem; color: #fff; background: #8c0b22; }
+    .notification-push-content { display: flex; gap: .65rem; justify-content: space-between; }
+    .notification-push-content strong { display: block; font-size: .84rem; line-height: 1.3; }
+    .notification-push-content p { font-size: .76rem; color: #645e60; margin: .2rem 0 0; overflow-wrap: anywhere; }
+    .notification-push-content img { width: 4.2rem; height: 4.2rem; object-fit: cover; border-radius: .45rem; }
+    .notification-app-image-wrap { height: 10.5rem; display: grid; place-items: center; background: #efe7e8; position: relative; color: #8b777c; font-size: .8rem; }
+    .notification-app-image-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .notification-app-image-wrap span:last-child { position: absolute; right: .55rem; bottom: .5rem; background: #2e1920c9; color: white; border-radius: 1rem; padding: .12rem .5rem; font-size: .7rem; }
+    .notification-gallery-thumbs { display: flex; gap: .4rem; padding: .5rem .7rem 0; overflow-x: auto; }
+    .notification-gallery-thumbs button { border: 2px solid transparent; border-radius: .4rem; padding: 0; flex: 0 0 auto; background: transparent; }
+    .notification-gallery-thumbs button.active { border-color: #8c0b22; }
+    .notification-gallery-thumbs img { width: 2.8rem; height: 2.8rem; object-fit: cover; border-radius: .25rem; }
+    .notification-app-copy { padding: .75rem .85rem .9rem; }
+    .notification-app-copy strong { display: block; font-size: .9rem; }
+    .notification-app-copy p { font-size: .78rem; color: #635c5e; margin: .3rem 0 .6rem; overflow-wrap: anywhere; }
+    .notification-app-copy small { color: #8c0b22; font-weight: 700; }
+</style>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial"/>
+    <script>
+        (() => {
+            const campaignImages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewData["CampaignPreviewImages"]));
+            const title = document.getElementById('Title');
+            const message = document.getElementById('Message');
+            const imageUrl = document.getElementById('ImageUrl');
+            const images = document.getElementById('Images');
+            const audience = document.getElementById('AudienceType');
+            const selected = document.getElementById('selected-customers-field');
+            const customerSearch = document.getElementById('customer-search');
+            const customerSearchResults = document.getElementById('customer-search-results');
+            const selectedIds = document.getElementById('SelectedCustomerIds');
+            const selectedCustomerDetails = document.getElementById('selected-customer-details');
+            const previewCustomerDetails = document.getElementById('preview-customer-details');
+            const noPurchaseAudience = document.getElementById('no-purchase-audience');
+            const noPurchaseCount = document.getElementById('no-purchase-count');
+            const environment = document.getElementById('Environment');
+            const campaign = document.getElementById('LinkedCampaignId');
+            const linkedImage = document.getElementById('UseLinkedCampaignImage');
+            const linkedImageChoice = document.getElementById('linked-campaign-image-choice');
+            const gallery = document.getElementById('preview-gallery-thumbs');
+            const appImage = document.getElementById('preview-app-image');
+            const pushImage = document.getElementById('preview-push-image');
+            const imageCount = document.getElementById('preview-image-count');
+            const appImageWrap = document.getElementById('preview-app-image-wrap');
+            let objectUrls = [];
+            let imageSources = [];
+            let selectedImage = 0;
+            const chosenCustomers = new Map();
+            let previewCustomer = null;
+            const tokenSuggestions = new Map([
+                [title, document.getElementById('title-token-suggestions')],
+                [message, document.getElementById('message-token-suggestions')]
+            ]);
+
+            function hideTokenSuggestions() {
+                for (const [field, list] of tokenSuggestions) {
+                    list.hidden = true;
+                    field.setAttribute('aria-expanded', 'false');
+                }
+            }
+
+            function tokenStart(field) {
+                if (field.selectionStart !== field.selectionEnd) return -1;
+                const beforeCaret = field.value.slice(0, field.selectionStart);
+                const match = beforeCaret.match(/\{([a-z]*)$/i);
+                return match && 'customername'.startsWith(match[1].toLowerCase())
+                    ? field.selectionStart - match[0].length : -1;
+            }
+
+            function updateTokenSuggestions(field) {
+                hideTokenSuggestions();
+                if (tokenStart(field) < 0) return;
+                tokenSuggestions.get(field).hidden = false;
+                field.setAttribute('aria-expanded', 'true');
+            }
+
+            function insertTokenSuggestion(field) {
+                const start = tokenStart(field);
+                if (start < 0) return;
+                const end = field.selectionStart + (field.value[field.selectionStart] === '}' ? 1 : 0);
+                field.setRangeText('{CustomerName}', start, end, 'end');
+                hideTokenSuggestions();
+                field.focus();
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            for (const [field, list] of tokenSuggestions) {
+                field.addEventListener('input', () => updateTokenSuggestions(field));
+                field.addEventListener('click', () => updateTokenSuggestions(field));
+                field.addEventListener('keyup', event => {
+                    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key))
+                        updateTokenSuggestions(field);
+                });
+                field.addEventListener('keydown', event => {
+                    if (list.hidden) return;
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        hideTokenSuggestions();
+                    } else if (event.key === 'Enter' || event.key === 'Tab') {
+                        event.preventDefault();
+                        insertTokenSuggestion(field);
+                    } else if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                    }
+                });
+                list.querySelector('button').addEventListener('mousedown', event => event.preventDefault());
+                list.querySelector('button').addEventListener('click', () => insertTokenSuggestion(field));
+            }
+            document.addEventListener('pointerdown', event => {
+                if (!event.target.closest('.notification-token-suggestions')
+                    && event.target !== title && event.target !== message) hideTokenSuggestions();
+            });
+
+            function syncSelectedCustomers() {
+                const ids = new Set(selectedIds.value.split(',').map(x => x.trim()).filter(Boolean));
+                for (const id of chosenCustomers.keys())
+                    if (!ids.has(id)) chosenCustomers.delete(id);
+                if (previewCustomer && !ids.has(String(previewCustomer.id))) previewCustomer = null;
+                selectedCustomerDetails.textContent = chosenCustomers.size
+                    ? `Selected: ${[...chosenCustomers.values()].map(x => `${x.name || 'Customer'} · ${x.mobileNo || 'No mobile'} · ID ${x.id}`).join('; ')}`
+                    : '';
+                render();
+            }
+
+            function renderSelectedImage() {
+                const hasImages = imageSources.length > 0;
+                appImage.hidden = !hasImages;
+                appImageWrap.hidden = !hasImages;
+                imageCount.hidden = !hasImages;
+                if (hasImages) {
+                    appImage.src = imageSources[selectedImage];
+                    imageCount.textContent = `${selectedImage + 1} / ${imageSources.length}`;
+                }
+                for (const [index, button] of [...gallery.children].entries())
+                    button.classList.toggle('active', index === selectedImage);
+            }
+            function render() {
+                const activePreviewCustomer = audience.value === 'Selected' ? previewCustomer : null;
+                const customerName = activePreviewCustomer?.name?.trim() || (activePreviewCustomer ? 'Customer' : 'Sample Customer');
+                const personalize = value => value.replace(/\{CustomerName\}/gi, customerName);
+                const heading = personalize(title.value.trim() || 'Your notification title');
+                const body = personalize(message.value.trim() || 'Your message will appear here.');
+                previewCustomerDetails.textContent = activePreviewCustomer
+                    ? `Previewing ${customerName} · ${activePreviewCustomer.mobileNo || 'No mobile'} · ID ${activePreviewCustomer.id}`
+                    : 'Example recipient: Sample Customer. Select a customer to preview their details.';
+                document.getElementById('preview-push-title').textContent = heading;
+                document.getElementById('preview-app-title').textContent = heading;
+                document.getElementById('preview-push-message').textContent = body;
+                document.getElementById('preview-app-message').textContent = body;
+                document.getElementById('preview-environment').textContent = environment.value.toUpperCase();
+                document.getElementById('preview-app-target').textContent = campaign.value
+                    ? `Opens ${campaign.options[campaign.selectedIndex].text.split(':')[0]}`
+                    : 'Opens notification history';
+                selected.hidden = audience.value !== 'Selected';
+                noPurchaseAudience.hidden = !(audience.value.startsWith('NoPurchase') || audience.value === 'NeverPurchased');
+                linkedImageChoice.hidden = !campaign.value;
+
+                objectUrls.forEach(URL.revokeObjectURL);
+                objectUrls = [];
+                imageSources = [];
+                const remote = imageUrl.value.trim();
+                if (remote.startsWith('https://')) imageSources.push(remote);
+                for (const file of images.files) {
+                    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) continue;
+                    const url = URL.createObjectURL(file);
+                    objectUrls.push(url);
+                    imageSources.push(url);
+                }
+                if (imageSources.length === 0 && campaign.value && linkedImage.checked)
+                    imageSources.push(...(campaignImages[campaign.value] || []));
+                selectedImage = Math.min(selectedImage, Math.max(0, imageSources.length - 1));
+                pushImage.hidden = imageSources.length === 0 || !imageSources[0].startsWith('https://');
+                if (!pushImage.hidden) pushImage.src = imageSources[0];
+                gallery.replaceChildren();
+                imageSources.forEach((url, index) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.setAttribute('aria-label', `Preview image ${index + 1}`);
+                    const thumb = document.createElement('img');
+                    thumb.src = url;
+                    thumb.alt = '';
+                    button.append(thumb);
+                    button.classList.toggle('active', index === selectedImage);
+                    button.addEventListener('click', () => { selectedImage = index; renderSelectedImage(); });
+                    gallery.append(button);
+                });
+                renderSelectedImage();
+            }
+            for (const field of [title, message, imageUrl, environment, audience, campaign, linkedImage])
+                field.addEventListener('input', render);
+            document.getElementById('insert-customer-name').addEventListener('click', () => {
+                message.setRangeText('{CustomerName}', message.selectionStart, message.selectionEnd, 'end');
+                message.focus();
+                message.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+            selectedIds.addEventListener('input', syncSelectedCustomers);
+            images.addEventListener('change', render);
+            let searchTimer;
+            let searchRequest = 0;
+            customerSearch.addEventListener('input', () => {
+                clearTimeout(searchTimer);
+                const query = customerSearch.value.trim();
+                customerSearchResults.replaceChildren();
+                if (query.length < 2) return;
+                searchTimer = setTimeout(async () => {
+                    const request = ++searchRequest;
+                    try {
+                        const response = await fetch(`${customerSearch.dataset.url}?query=${encodeURIComponent(query)}`);
+                        if (!response.ok) throw new Error('Search unavailable');
+                        const customers = await response.json();
+                        if (request !== searchRequest || customerSearch.value.trim() !== query) return;
+                        if (!customers.length) { customerSearchResults.textContent = 'No active customers found in this group.'; return; }
+                        for (const customer of customers) {
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.className = 'list-group-item list-group-item-action';
+                            button.textContent = `${customer.name || 'Customer'} · ${customer.mobileNo || 'No mobile'} · ID ${customer.id}`;
+                            button.addEventListener('click', () => {
+                                const ids = selectedIds.value.split(',').map(x => x.trim()).filter(Boolean);
+                                const id = String(customer.id);
+                                if (!ids.includes(id) && ids.length < 200) ids.push(id);
+                                selectedIds.value = ids.join(', ');
+                                if (ids.includes(id)) {
+                                    chosenCustomers.set(id, customer);
+                                    previewCustomer = customer;
+                                }
+                                syncSelectedCustomers();
+                                customerSearch.value = '';
+                                customerSearchResults.replaceChildren();
+                            });
+                            customerSearchResults.append(button);
+                        }
+                    } catch { customerSearchResults.textContent = 'Customer search is unavailable. Enter customer IDs manually.'; }
+                }, 250);
+            });
+            audience.addEventListener('change', async () => {
+                if (!(audience.value.startsWith('NoPurchase') || audience.value === 'NeverPurchased')) return;
+                const type = audience.value;
+                noPurchaseCount.textContent = 'Checking customers…';
+                try {
+                    const response = await fetch(`${noPurchaseAudience.dataset.url}?audienceType=${encodeURIComponent(type)}`);
+                    if (!response.ok) throw new Error('Preview unavailable');
+                    const result = await response.json();
+                    if (audience.value !== type) return;
+                    noPurchaseCount.textContent = result.tooMany
+                        ? 'Over 20,000 customers match. Choose a narrower audience.'
+                        : `${result.customerCount} customer(s) match this filter.`;
+                } catch { noPurchaseCount.textContent = 'Audience preview is unavailable. Try again before saving.'; }
+            });
+            render();
+            if (audience.value.startsWith('NoPurchase') || audience.value === 'NeverPurchased') audience.dispatchEvent(new Event('change'));
+        })();
+    </script>
+}

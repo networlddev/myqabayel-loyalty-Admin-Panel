@@ -1,0 +1,1 @@
+.campaign-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}.campaign-gallery img{width:100%;height:180px;object-fit:contain;background:#111827;border-radius:12px;border:1px solid var(--border)}.campaign-gallery.compact{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px}.campaign-gallery.compact img{height:100px}

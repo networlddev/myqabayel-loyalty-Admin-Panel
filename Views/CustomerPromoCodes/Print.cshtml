@@ -1,0 +1,41 @@
+@model PromoPrintViewModel
+@inject QabayelMall.API.Services.LoyaltyCurrencyService CurrencyService
+@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@{
+    ViewData["Title"] = "Print Customer PromoCode";
+    var currencyCode = await CurrencyService.GetCodeAsync(
+        await GroupAudience.GetConfiguredGroupCodeAsync(Context.RequestAborted), Context.RequestAborted);
+    var pushEnvironment = await GroupAudience.GetConfiguredPushEnvironmentAsync(Context.RequestAborted);
+}
+<style>
+.promo-print-card{max-width:720px;margin:auto;background:#fff;border:1px solid #eadde0;border-radius:20px;padding:32px;text-align:center}
+.promo-print-card img{width:100%;max-width:620px;height:auto}
+@@media print{.sidebar,.topbar,.print-actions{display:none!important}.main-area,.page-content{margin:0!important;padding:0!important}.promo-print-card{border:0;box-shadow:none;max-width:none}}
+</style>
+<div class="print-actions d-flex flex-wrap justify-content-end gap-2 mb-3">
+    <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Promo.Id">Back to campaign</a>
+    @if (Model.Code.Status == "Issued")
+    {
+        <form asp-action="SendNotification" method="post" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Promo.Id"/>
+            <input type="hidden" name="voucherNo" value="@Model.Code.VoucherNo"/>
+            <span class="small text-muted">@pushEnvironment app</span>
+            <label for="notificationImageUpload" class="visually-hidden">Notification image (optional)</label>
+            <input id="notificationImageUpload" name="notificationImageUpload" type="file" accept="image/jpeg,image/png,image/webp" class="form-control" aria-label="Notification image (optional)" style="max-width:250px" />
+            <label for="notificationImageHttpsUrl" class="visually-hidden">Public HTTPS image URL (optional)</label>
+            <input id="notificationImageHttpsUrl" name="notificationImageHttpsUrl" type="url" class="form-control" placeholder="Optional HTTPS image URL" aria-label="Public HTTPS image URL (optional)" style="max-width:240px" />
+            <button class="btn btn-outline-secondary text-nowrap" type="submit">Send app notification</button>
+        </form>
+    }
+    <button class="btn btn-centro" type="button" onclick="window.print()">Print Code 128 barcode</button>
+</div>
+<div class="promo-print-card">
+    <img src="~/images/al-qabayel-discount-center.jpg" alt="Al Qabayel Discount Center" style="width:64px;height:64px;object-fit:contain" />
+    <h1 class="h3 mt-3">@Model.Promo.Name</h1>
+    <p>@Model.Promo.Caption</p>
+    <div class="h4">@(Model.Code.Amount > 0 ? $"{QabayelMall.API.Services.LoyaltyCurrencyService.FormatAmount(Model.Code.Amount, currencyCode)} off" : $"{Model.Code.Percentage}% off")</div>
+    <p class="text-muted">For @Model.Code.CustomerName · Valid through @Model.Code.Expiry.ToString("dd MMM yyyy, h:mm tt")</p>
+    <img src="@Model.BarcodeSvg" alt="Promo barcode" />
+    <p class="small text-muted mb-0">Present this barcode at checkout. Discount applies to eligible departments only. Status: @Model.Code.Status.</p>
+</div>

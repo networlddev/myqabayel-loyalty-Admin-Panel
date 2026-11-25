@@ -1,0 +1,183 @@
+@model PromoDetailsViewModel
+@inject QabayelMall.API.Services.LoyaltyCurrencyService CurrencyService
+@inject QabayelMall.API.Services.LoyaltyCustomerAudience GroupAudience
+@{
+    ViewData["Title"] = "PromoCode Details";
+    var currencyCode = await CurrencyService.GetCodeAsync(
+        await GroupAudience.GetConfiguredGroupCodeAsync(Context.RequestAborted), Context.RequestAborted);
+}
+
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+        <span class="eyebrow">CUSTOMER PROMOCODE</span>
+        <h1>@Model.Promo.Name</h1>
+        <p class="text-muted mb-0">@Model.Promo.Caption</p>
+    </div>
+    <div class="d-flex gap-2"><a class="btn btn-outline-secondary" asp-action="Index">All campaigns</a><a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Promo.Id">Edit campaign</a><a class="btn btn-centro" asp-action="Issue" asp-route-id="@Model.Promo.Id">Issue customer code</a></div>
+</div>
+@if (ViewData["HasDraft"] is true)
+{
+    <div class="alert alert-info">This campaign has saved draft edits. <a asp-action="Edit" asp-route-id="@Model.Promo.Id">Review or apply the draft</a>. Live customer codes have not changed.</div>
+}
+<div class="panel p-4 mb-4">
+    <div class="row g-3">
+        <div class="col-md-4"><small class="text-muted d-block">Campaign identifier</small><strong>@Model.Promo.CampaignCode</strong></div>
+        <div class="col-md-4"><small class="text-muted d-block">Valid until</small><strong>@Model.Promo.Validity.ToString("dd MMM yyyy, h:mm tt")</strong></div>
+        <div class="col-md-4"><small class="text-muted d-block">Issued codes</small><strong>@Model.Codes.Count</strong></div>
+        @if (!string.IsNullOrWhiteSpace(Model.ImageUrl)) { <div class="col-12"><img src="@Model.ImageUrl" alt="Promo campaign image" style="max-width:240px;max-height:160px;object-fit:contain"/></div> }
+        @if (!string.IsNullOrWhiteSpace(Model.Promo.Body)) { <div class="col-12">@Model.Promo.Body</div> }
+        <div class="col-12"><small class="text-muted d-block mb-1">Eligible departments</small>
+            @foreach (var department in Model.Departments) { <span class="badge bg-light text-dark border me-1 mb-1 px-2 py-2">@department.Name</span> }
+        </div>
+    </div>
+    <div class="small text-muted mt-3">Department rules are held fixed after codes are issued. Editing discount or validity updates only unused customer vouchers; redeemed and revoked vouchers retain their values.</div>
+</div>
+<div class="panel">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 p-3 border-bottom">
+        <div>
+            <strong>Customer notifications</strong>
+            <div id="selected-notification-count" class="small text-muted" aria-live="polite">0 selected</div>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="select-all-issued" type="button" class="btn btn-sm btn-outline-secondary">Select all active</button>
+            <button id="clear-issued" type="button" class="btn btn-sm btn-outline-secondary">Clear</button>
+            <button id="open-selected-notification" type="button" class="btn btn-sm btn-centro" data-bs-toggle="modal" data-bs-target="#selected-notification-dialog" disabled>Send notification</button>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+            <thead><tr><th scope="col">Select</th><th>Customer</th><th>Discount</th><th>Status</th><th>Invoice</th><th>Used amount</th><th></th></tr></thead>
+            <tbody>
+            @if (Model.Codes.Count == 0) { <tr><td colspan="7" class="text-center text-muted py-5">No customer codes issued yet.</td></tr> }
+            @foreach (var code in Model.Codes)
+            {
+                <tr>
+                    <td>
+                        @if (code.Status == "Issued")
+                        {
+                            <input class="form-check-input issued-notification-choice" type="checkbox" value="@code.VoucherNo" aria-label="Notify @code.CustomerName" data-name="@code.CustomerName" data-discount="@(code.Amount > 0 ? QabayelMall.API.Services.LoyaltyCurrencyService.FormatAmount(code.Amount, currencyCode) : $"{code.Percentage}%") off" data-expiry="@code.Expiry.ToString("dd MMM yyyy")" />
+                        }
+                    </td>
+                    <td>@code.CustomerName <small class="text-muted d-block">ID @code.CustomerId · @code.MobileNo</small></td>
+                    <td>@(code.Amount > 0 ? QabayelMall.API.Services.LoyaltyCurrencyService.FormatAmount(code.Amount, currencyCode) : $"{code.Percentage}%")</td>
+                    <td>@code.Status</td>
+                    <td>@(code.InvoiceNo?.ToString() ?? "—")</td>
+                    <td>@QabayelMall.API.Services.LoyaltyCurrencyService.FormatAmount(code.UsedAmount, currencyCode)</td>
+                    <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="Print" asp-route-id="@Model.Promo.Id" asp-route-voucherNo="@code.VoucherNo">Print</a>
+                        @if (code.Status == "Issued")
+                        {
+                            <form asp-action="Revoke" method="post" class="d-inline" onsubmit="return confirm('Revoke this unused PromoCode?');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@Model.Promo.Id"/><input type="hidden" name="voucherNo" value="@code.VoucherNo"/>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Revoke</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="selected-notification-dialog" tabindex="-1" aria-labelledby="selected-notification-heading" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form id="selected-notification-form" asp-action="SendSelectedNotifications" method="post" enctype="multipart/form-data" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Promo.Id" />
+            <input id="selected-voucher-nos" type="hidden" name="selectedVoucherNosJson" value="[]" />
+            <div class="modal-header"><h2 id="selected-notification-heading" class="modal-title h5">Send customer notifications</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p class="text-muted small">Each selected customer receives a personalized notification. Type <code>{</code> to insert their name, discount, or expiry date. The private code is not included.</p>
+                <div class="mb-3"><label for="selected-notification-title" class="form-label">Notification title</label><div class="position-relative"><input id="selected-notification-title" name="notificationTitle" class="form-control" maxlength="150" required value="Your PromoCode is ready" autocomplete="off" aria-autocomplete="list" aria-controls="selected-title-suggestions" aria-expanded="false"/><div id="selected-title-suggestions" class="list-group position-absolute start-0 end-0 shadow-sm d-none" role="listbox" style="z-index:1060;max-height:220px;overflow:auto" hidden></div></div></div>
+                <div class="mb-3"><label for="selected-notification-message" class="form-label">Notification message</label><div class="position-relative"><textarea id="selected-notification-message" name="notificationMessage" class="form-control" rows="4" maxlength="500" required aria-autocomplete="list" aria-controls="selected-message-suggestions" aria-expanded="false">Hi {name}, your promo gives {discount}. Valid through {expiry}. Open the app to view your barcode.</textarea><div id="selected-message-suggestions" class="list-group position-absolute start-0 end-0 shadow-sm d-none" role="listbox" style="z-index:1060;max-height:220px;overflow:auto" hidden></div></div></div>
+                <div class="mb-3"><span class="form-label">Firebase environment</span><div class="form-control-plaintext">@await GroupAudience.GetConfiguredPushEnvironmentAsync(Context.RequestAborted) · <a asp-controller="Settings" asp-action="Index">Change in Loyalty Settings</a></div></div>
+                <div class="mb-3"><label for="selected-notification-image" class="form-label">Notification image (optional)</label><input id="selected-notification-image" name="notificationImageUpload" type="file" class="form-control" accept="image/jpeg,image/png,image/webp"/><div class="form-text">If empty, the campaign image is used. JPEG, PNG or WebP; up to 5 MB.</div></div>
+                <div class="mb-3"><label for="selected-notification-image-url" class="form-label">Public HTTPS image URL (optional)</label><input id="selected-notification-image-url" name="notificationImageHttpsUrl" type="url" class="form-control" placeholder="https://example.com/promo.jpg"/><div class="form-text">Choose either an upload or a URL.</div></div>
+                <div class="alert alert-light border mb-0"><strong id="selected-preview-heading">Preview</strong><div id="selected-title-preview" class="fw-semibold mt-2"></div><div id="selected-message-preview" class="mt-1"></div></div>
+            </div>
+            <div class="modal-footer"><span id="selected-modal-count" class="small text-muted me-auto"></span><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button id="send-selected-notifications" type="submit" class="btn btn-centro">Send notification</button></div>
+        </form>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        (() => {
+            const choices = [...document.querySelectorAll('.issued-notification-choice')];
+            const count = document.getElementById('selected-notification-count');
+            const modalCount = document.getElementById('selected-modal-count');
+            const open = document.getElementById('open-selected-notification');
+            const send = document.getElementById('send-selected-notifications');
+            const updateCount = () => {
+                const selected = choices.filter(choice => choice.checked).length;
+                count.textContent = `${selected} of ${choices.length} active codes selected`;
+                modalCount.textContent = `${selected} notification${selected === 1 ? '' : 's'} selected`;
+                document.getElementById('selected-voucher-nos').value = JSON.stringify(choices.filter(choice => choice.checked).map(choice => Number(choice.value)));
+                open.disabled = send.disabled = selected === 0;
+                updatePreview();
+            };
+            choices.forEach(choice => choice.addEventListener('change', updateCount));
+            document.getElementById('select-all-issued').addEventListener('click', () => { choices.forEach(choice => choice.checked = true); updateCount(); });
+            document.getElementById('clear-issued').addEventListener('click', () => { choices.forEach(choice => choice.checked = false); updateCount(); });
+
+            const title = document.getElementById('selected-notification-title');
+            const message = document.getElementById('selected-notification-message');
+            const tokens = [
+                { token: '{name}', label: 'Customer name' },
+                { token: '{discount}', label: 'Discount' },
+                { token: '{expiry}', label: 'Expiry date' }
+            ];
+            const bindSuggestions = (field, menu) => {
+                const update = () => {
+                    const before = field.value.slice(0, field.selectionStart);
+                    const start = before.lastIndexOf('{');
+                    const query = start < 0 ? null : before.slice(start + 1);
+                    const matches = query !== null && /^[a-z]*$/i.test(query)
+                        ? tokens.filter(item => item.token.slice(1, -1).startsWith(query.toLowerCase()) || item.label.toLowerCase().includes(query.toLowerCase())) : [];
+                    menu.replaceChildren();
+                    for (const item of matches) {
+                        const option = document.createElement('button');
+                        option.type = 'button';
+                        option.className = 'list-group-item list-group-item-action text-start';
+                        option.textContent = `${item.label}  ${item.token}`;
+                        option.addEventListener('mousedown', event => event.preventDefault());
+                        option.addEventListener('click', () => {
+                            field.setRangeText(item.token, start, field.selectionStart, 'end');
+                            menu.hidden = true; menu.classList.add('d-none'); field.focus();
+                            field.dispatchEvent(new Event('input', { bubbles: true }));
+                        });
+                        menu.append(option);
+                    }
+                    menu.hidden = matches.length === 0;
+                    menu.classList.toggle('d-none', matches.length === 0);
+                    field.setAttribute('aria-expanded', String(matches.length > 0));
+                };
+                field.addEventListener('input', update);
+                field.addEventListener('click', update);
+                field.addEventListener('blur', () => setTimeout(() => { menu.hidden = true; menu.classList.add('d-none'); }, 150));
+                field.addEventListener('keydown', event => { if (event.key === 'Escape') { menu.hidden = true; menu.classList.add('d-none'); } });
+            };
+            bindSuggestions(title, document.getElementById('selected-title-suggestions'));
+            bindSuggestions(message, document.getElementById('selected-message-suggestions'));
+            const preview = text => {
+                const selected = choices.find(choice => choice.checked);
+                const customerName = selected?.dataset.name || 'Customer';
+                const discount = selected?.dataset.discount || '@currencyCode 5.00 off';
+                const expiry = selected?.dataset.expiry || '29 Nov 2026';
+                return text.replace(/\{name\}/gi, customerName)
+                .replace(/\{discount\}/gi, discount)
+                .replace(/\{expiry\}/gi, expiry);
+            };
+            const updatePreview = () => {
+                const selected = choices.find(choice => choice.checked);
+                document.getElementById('selected-preview-heading').textContent = `Preview for ${selected?.dataset.name || 'customer'}`;
+                document.getElementById('selected-title-preview').textContent = preview(title.value);
+                document.getElementById('selected-message-preview').textContent = preview(message.value);
+            };
+            title.addEventListener('input', updatePreview);
+            message.addEventListener('input', updatePreview);
+            updateCount();
+        })();
+    </script>
+}

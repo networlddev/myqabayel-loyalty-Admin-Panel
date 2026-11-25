@@ -1,0 +1,26 @@
+@model CampaignCreateViewModel
+@{ ViewData["Title"] = "Create Campaign"; }
+<div class="form-card">
+    <span class="eyebrow">NEW CONTENT</span><h1>Create campaign</h1>
+    <p class="text-muted">Save your campaign as a draft, then publish it when it is ready.</p>
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="row g-3 mt-2">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="col-12"><label asp-for="Title" class="form-label"></label><input asp-for="Title" class="form-control"/><span asp-validation-for="Title" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="CampaignType" class="form-label">Content type</label><select asp-for="CampaignType" class="form-select"><option>Flyer</option><option value="Offer">Special Offer</option><option>Advertisement</option></select></div>
+        <div class="col-md-6"><label asp-for="AudienceCondition" class="form-label">Audience</label><select asp-for="AudienceCondition" class="form-select"><option value="1">All customers</option><option value="2">Points customers</option><option value="3">Recent customers</option></select></div>
+        <div class="col-md-6"><label asp-for="RecentDays" class="form-label">Recent customer window (days)</label><input asp-for="RecentDays" class="form-control" min="1" max="365"/><span asp-validation-for="RecentDays" class="text-danger"></span><div class="form-text">Required only for the Recent customers audience.</div></div>
+        <div class="col-md-6"><label asp-for="ErpBranchId" class="form-label">ERP branch ID (optional)</label><input asp-for="ErpBranchId" class="form-control" min="1"/></div>
+        <div class="col-md-6"><label asp-for="StartDate" class="form-label"></label><input asp-for="StartDate" class="form-control"/></div>
+        <div class="col-md-6"><label asp-for="EndDate" class="form-label"></label><input asp-for="EndDate" class="form-control"/><span asp-validation-for="EndDate" class="text-danger"></span></div>
+        <div id="advertisementSettings" class="col-12 row g-3 m-0 p-0">
+            <div class="col-md-6"><label asp-for="DisplaySeconds" class="form-label">Advertisement display duration (seconds)</label><input asp-for="DisplaySeconds" class="form-control" min="1" max="300"/><span asp-validation-for="DisplaySeconds" class="text-danger"></span><div class="form-text">How long each advertisement image stays visible in the Loyalty app.</div></div>
+            <div class="col-md-6 d-flex align-items-center pt-4"><div class="form-check"><input asp-for="AllowSkip" class="form-check-input"/><label asp-for="AllowSkip" class="form-check-label">Allow customers to skip this advertisement</label></div></div>
+        </div>
+        <div class="col-12"><label asp-for="Header" class="form-label"></label><input asp-for="Header" class="form-control"/></div>
+        <div class="col-12"><label asp-for="Body" class="form-label">Description</label><textarea asp-for="Body" class="form-control" rows="4"></textarea></div>
+        <div class="col-12"><label asp-for="Images" class="form-label">Campaign images</label><input asp-for="Images" class="form-control" accept="image/png,image/jpeg,image/webp" multiple/><span asp-validation-for="Images" class="text-danger"></span><div class="form-text">Choose 1–10 PNG, JPG or WebP images. Maximum 5 MB each.</div></div>
+        <div class="col-12 form-check ms-2"><input asp-for="PublishNow" class="form-check-input"/><label asp-for="PublishNow" class="form-check-label">Publish to the loyalty app</label></div>
+        <div class="col-12 d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" asp-action="Index">Cancel</a><button class="btn btn-centro" type="submit">Save campaign</button></div>
+    </form>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial"/><script>const campaignType=document.getElementById('CampaignType');const advertisementSettings=document.getElementById('advertisementSettings');function toggleAdvertisementSettings(){advertisementSettings.hidden=campaignType.value!=='Advertisement';}campaignType.addEventListener('change',toggleAdvertisementSettings);toggleAdvertisementSettings();</script> }

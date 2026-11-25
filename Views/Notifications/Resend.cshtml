@@ -1,0 +1,128 @@
+@using QabayelMall.API.Services
+@model LoyaltyNotificationResendViewModel
+@{
+    ViewData["Title"] = "Send notification again";
+}
+
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <span class="eyebrow">APP NOTIFICATIONS</span>
+        <h1>Send again</h1>
+        <p class="text-muted mb-0">Choose who receives this notification in @Model.Environment.</p>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Index">Back to notifications</a>
+</div>
+
+<div class="panel p-4" style="max-width: 760px">
+    <div class="mb-4">
+        <h2 class="h5 mb-1">@CustomerNotificationText.HidePromoCodes(Model.Title)</h2>
+        <p class="text-muted mb-2">@CustomerNotificationText.HidePromoCodes(Model.Message)</p>
+        <small class="text-muted">Current audience: @Model.CurrentAudience</small>
+    </div>
+
+    <form asp-action="Resend" asp-route-id="@Model.Id" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <fieldset class="mb-3">
+            <legend class="form-label fw-semibold fs-6">Send to</legend>
+            <div class="form-check mb-2">
+                <input asp-for="AudienceType" class="form-check-input" type="radio" value="All" id="resend-all" />
+                <label class="form-check-label" for="resend-all">All active customers in this loyalty group</label>
+            </div>
+            <div class="form-check">
+                <input asp-for="AudienceType" class="form-check-input" type="radio" value="Selected" id="resend-selected" />
+                <label class="form-check-label" for="resend-selected">Specific customers</label>
+            </div>
+            <span asp-validation-for="AudienceType" class="text-danger d-block"></span>
+        </fieldset>
+
+        <div id="resend-selected-fields" class="border rounded p-3 mb-3" hidden>
+            <label for="resend-customer-search" class="form-label fw-semibold">Find a customer</label>
+            <input id="resend-customer-search" class="form-control" autocomplete="off"
+                   data-url="@Url.Action("SearchCustomers")"
+                   placeholder="Search by name, mobile number, or customer ID" />
+            <div id="resend-customer-results" class="list-group mt-2" role="status" aria-live="polite"></div>
+
+            <label asp-for="SelectedCustomerIds" class="form-label fw-semibold mt-3"></label>
+            <input asp-for="SelectedCustomerIds" class="form-control"
+                   placeholder="Chosen customer IDs appear here" />
+            <span asp-validation-for="SelectedCustomerIds" class="text-danger"></span>
+            <div class="form-text">Choose up to 200 active customers. You can remove an ID from this field before sending.</div>
+            <div id="resend-selected-summary" class="small text-muted mt-2" aria-live="polite"></div>
+        </div>
+
+        <div class="alert alert-light border small">
+            Sending again updates this notification's in-app audience and starts a new Firebase push attempt.
+            Earlier device delivery results are replaced. Only customers with an active @Model.Environment device can receive the push.
+        </div>
+        <button class="btn btn-success" type="submit">Send again</button>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const all = document.getElementById('resend-all');
+            const selected = document.getElementById('resend-selected');
+            const fields = document.getElementById('resend-selected-fields');
+            const search = document.getElementById('resend-customer-search');
+            const results = document.getElementById('resend-customer-results');
+            const ids = document.getElementById('SelectedCustomerIds');
+            const summary = document.getElementById('resend-selected-summary');
+            let searchTimer;
+            let requestNumber = 0;
+
+            function render() {
+                fields.hidden = !selected.checked;
+                const values = ids.value.split(',').map(value => value.trim()).filter(Boolean);
+                summary.textContent = values.length ? `${values.length} customer(s) selected: ${values.join(', ')}` : 'No customers selected.';
+            }
+
+            all.addEventListener('change', render);
+            selected.addEventListener('change', render);
+            ids.addEventListener('input', render);
+            search.addEventListener('input', () => {
+                clearTimeout(searchTimer);
+                const query = search.value.trim();
+                results.replaceChildren();
+                const request = ++requestNumber;
+                if (query.length < 2) return;
+                searchTimer = setTimeout(async () => {
+                    try {
+                        const response = await fetch(`${search.dataset.url}?query=${encodeURIComponent(query)}`, {
+                            credentials: 'same-origin', cache: 'no-store'
+                        });
+                        if (!response.ok) throw new Error('Search unavailable');
+                        const customers = await response.json();
+                        if (request !== requestNumber || search.value.trim() !== query) return;
+                        if (!customers.length) {
+                            results.textContent = 'No active customers found in this group.';
+                            return;
+                        }
+                        for (const customer of customers) {
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.className = 'list-group-item list-group-item-action';
+                            button.textContent = `${customer.name || 'Customer'} · ${customer.mobileNo || 'No mobile'} · ID ${customer.id}`;
+                            button.addEventListener('click', () => {
+                                const values = ids.value.split(',').map(value => value.trim()).filter(Boolean);
+                                const id = String(customer.id);
+                                if (!values.includes(id) && values.length < 200) values.push(id);
+                                ids.value = values.join(', ');
+                                search.value = '';
+                                results.replaceChildren();
+                                render();
+                            });
+                            results.append(button);
+                        }
+                    } catch {
+                        if (request === requestNumber)
+                            results.textContent = 'Customer search is unavailable. Enter customer IDs manually.';
+                    }
+                }, 250);
+            });
+            render();
+        })();
+    </script>
+}

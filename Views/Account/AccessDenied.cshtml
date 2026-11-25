@@ -1,0 +1,23 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "Access denied";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access denied · MY QABAYEL Admin</title>
+    <link rel="icon" type="image/jpeg" href="~/images/al-qabayel-discount-center.jpg" />
+    <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/myqabayel-theme.css" asp-append-version="true" />
+</head>
+<body class="login-page">
+    <main class="access-card">
+        <img class="qabayel-logo" src="~/images/al-qabayel-discount-center.jpg" alt="Al Qabayel Discount Center" />
+        <span class="login-kicker">ACCESS RESTRICTED</span>
+        <h1>You do not have permission to open this page.</h1>
+        <a asp-controller="Dashboard" asp-action="Index">Return to dashboard</a>
+    </main>
+</body>
+</html>

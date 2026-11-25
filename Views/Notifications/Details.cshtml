@@ -1,0 +1,105 @@
+@using QabayelMall.API.Services
+@model LoyaltyNotification
+@{
+    ViewData["Title"] = "Notification delivery";
+    var now = DateTime.UtcNow;
+    var isAvailable = Model.Status is "Published" or "Scheduled"
+        && Model.ScheduledAtUtc <= now
+        && (Model.ExpiresAtUtc is null || Model.ExpiresAtUtc > now);
+    var isExpired = Model.Status is "Published" or "Scheduled"
+        && Model.ExpiresAtUtc is not null && Model.ExpiresAtUtc <= now;
+    var appStatus = Model.Status is "Draft" or "Archived" ? Model.Status
+        : isExpired ? "Expired" : isAvailable ? "Live" : "Scheduled";
+    var accepted = Model.Deliveries.Count(x => x.Status == "Sent");
+    var failed = Model.Deliveries.Count(x => x.Status == "Failed");
+    var waiting = Model.Deliveries.Count(x => x.Status is "Pending" or "Retry");
+    var skipped = Model.Deliveries.Count(x => x.Status == "Skipped");
+    var availability = ViewData["DeviceAvailability"] as IReadOnlyDictionary<string, ActiveDeviceAvailability>;
+    var currentDevices = availability?.GetValueOrDefault(Model.Environment);
+    var audienceLabel = Model.AudienceType switch
+    {
+        "NeverPurchased" => "Never purchased",
+        "NoPurchase30" => "No purchase in 30 days",
+        "NoPurchase60" => "No purchase in 60 days",
+        "NoPurchase90" => "No purchase in 90 days",
+        "Selected" => "Selected customers",
+        _ => "All customers"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <span class="eyebrow">APP NOTIFICATIONS</span>
+        <h1>Delivery details</h1>
+        <p class="text-muted mb-0">@CustomerNotificationText.HidePromoCodes(Model.Title) · @Model.GroupCode · @Model.Environment</p>
+    </div>
+    <div class="d-flex gap-2"><a class="btn btn-outline-secondary" asp-controller="Engagement" asp-action="Details" asp-route-type="Notification" asp-route-id="@Model.Id">Customer reactions &amp; comments</a><a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">Refresh status</a><a class="btn btn-outline-secondary" asp-action="Index">Back to notifications</a></div>
+</div>
+
+<div class="panel p-4 mb-4">
+    <div class="row g-3">
+        <div class="col-md-3"><strong>Available in app</strong><div>@appStatus</div></div>
+        <div class="col-md-3"><strong>Targeted devices</strong><div>@Model.Deliveries.Count</div></div>
+        <div class="col-md-3"><strong>Accepted by Firebase</strong><div>@accepted</div></div>
+        <div class="col-md-3"><strong>Failed / waiting</strong><div>@failed / @waiting</div></div>
+    </div>
+    <div class="row g-3 mt-1">
+        <div class="col-md-3"><strong>Push status</strong><div>@(Model.Status == "Draft" ? "Not sent" : Model.DispatchStatus)</div></div>
+        <div class="col-md-3"><strong>Push attempts</strong><div>@Model.PushAttemptCount</div></div>
+        <div class="col-md-3"><strong>Last attempt</strong><div>@(Model.LastPushAttemptAtUtc?.ToLocalTime().ToString("dd MMM yyyy, h:mm:ss tt") ?? "Not attempted")</div></div>
+        <div class="col-md-3"><strong>Active @Model.Environment devices now</strong><div>@(availability is null ? "Unavailable" : (currentDevices?.DeviceCount ?? 0).ToString())</div></div>
+    </div>
+    <div class="small text-muted mt-3">Audience: @audienceLabel@if (ViewData["RecipientCount"] is int recipientCount) { <span> · @recipientCount customer(s) selected when saved</span> }</div>
+    <p class="text-muted small mt-3 mb-0">Live means the message is available in the app's notification history. Accepted by Firebase counts devices for which Firebase accepted the push request; it does not confirm that a phone displayed or opened it. @if (skipped > 0) { <span>@skipped device(s) were skipped because their registration is no longer active.</span> } NoDevices means there were no eligible devices when dispatch ran. Counts describe the latest send attempt; Send again resets the earlier device results.</p>
+    @if (Model.Deliveries.Any(x => x.LastError?.Contains("SenderId mismatch", StringComparison.OrdinalIgnoreCase) == true))
+    {
+        <div class="alert alert-warning mt-3 mb-0">The registered FCM token belongs to a different Firebase project. Configure the Flutter app with the project shown in Push Settings, obtain a new FCM token, call <code>POST /api/Devices/Register</code> again, then return to App Notifications and choose <strong>Send again</strong>.</div>
+    }
+</div>
+
+@if (Model.Images.Count > 0 || !string.IsNullOrWhiteSpace(Model.ImageUrl))
+{
+    <div class="panel p-4 mb-4">
+        <h2 class="h5">Notification images</h2>
+        <p class="text-muted small">The first image is used for the push card. The app can show the full gallery.</p>
+        <div class="d-flex flex-wrap gap-3">
+            @foreach (var image in Model.Images.OrderBy(x => x.SortOrder))
+            {
+                <div><img src="@image.ImageUrl" alt="Notification image @(image.SortOrder + 1)" class="rounded border" style="width: 180px; height: 120px; object-fit: cover" /><div class="small text-muted mt-1">Image @(image.SortOrder + 1)@(image.IsPrimary ? " · Push image" : "")</div></div>
+            }
+            @if (Model.Images.Count == 0 && !string.IsNullOrWhiteSpace(Model.ImageUrl))
+            {
+                <img src="@Model.ImageUrl" alt="Notification image" class="rounded border" style="width: 180px; height: 120px; object-fit: cover" />
+            }
+        </div>
+    </div>
+}
+
+<div class="panel p-4">
+    <h2 class="h5">Device delivery</h2>
+    @if (Model.Deliveries.Count == 0)
+    {
+        <p class="text-muted mb-0">No device delivery has been recorded. Check Push Settings and confirm a customer in this group has registered an FCM token for @Model.Environment.</p>
+    }
+    else
+    {
+        <p class="text-muted">@Model.Deliveries.Count device(s) · @Model.Deliveries.Count(x => x.Status == "Sent") accepted by Firebase · @Model.Deliveries.Count(x => x.Status == "Failed") failed · @Model.Deliveries.Count(x => x.Status == "Retry") retrying</p>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Device ID</th><th>Status</th><th>Failed attempts</th><th>Accepted by Firebase</th><th>Last error</th></tr></thead>
+                <tbody>
+                @foreach (var delivery in Model.Deliveries.OrderBy(x => x.DeviceId))
+                {
+                    <tr>
+                        <td>@delivery.DeviceId</td>
+                        <td>@delivery.Status</td>
+                        <td>@delivery.AttemptCount</td>
+                        <td>@(delivery.SentAtUtc?.ToLocalTime().ToString("dd MMM yyyy, h:mm:ss tt") ?? "—")</td>
+                        <td>@(string.IsNullOrWhiteSpace(delivery.LastError) ? "—" : delivery.LastError)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

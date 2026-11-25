@@ -1,0 +1,101 @@
+@model LoyaltyGroupSettingsViewModel
+@{
+    ViewData["Title"] = "Loyalty Settings";
+    var statusStyle = Model.GroupStatus == "Active" ? "alert-success"
+        : Model.GroupStatus is "Inactive" or "NotFound" or "Ambiguous" or "Invalid" ? "alert-danger"
+        : "alert-warning";
+}
+<div class="mb-4">
+    <span class="eyebrow">APPLICATION SETTINGS</span>
+    <h1>Loyalty group</h1>
+    <p class="text-muted">Choose the loyalty application group managed by this Admin Panel.</p>
+</div>
+<div class="panel p-4" style="max-width: 720px">
+    <form asp-action="Index" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <label asp-for="GroupCode" class="form-label fw-semibold"></label>
+        <div class="d-flex gap-2">
+            <input asp-for="GroupCode" class="form-control" maxlength="100" readonly aria-describedby="dedicated-group-note" />
+            <button id="check-group-code" class="btn btn-outline-secondary text-nowrap" type="button">Check status</button>
+        </div>
+        <span asp-validation-for="GroupCode" class="text-danger"></span>
+        <div id="dedicated-group-note" class="form-text">This admin workspace is dedicated to MY QABAYEL. Its group code cannot be changed here.</div>
+        <div class="mt-3">
+            <label asp-for="CurrencyCode" class="form-label fw-semibold"></label>
+            <select asp-for="CurrencyCode" class="form-select">
+                <option value="AED">AED · UAE dirham</option>
+                <option value="OMR">OMR · Omani rial</option>
+                <option value="QAR">QAR · Qatari riyal</option>
+            </select>
+            <span asp-validation-for="CurrencyCode" class="text-danger"></span>
+            <div class="form-text">Fixed PromoCode amounts and messages display this currency. Percentage discounts remain percentages.</div>
+        </div>
+        <div class="mt-3">
+            <label asp-for="PushEnvironment" class="form-label fw-semibold"></label>
+            <select asp-for="PushEnvironment" class="form-select">
+                <option value="Development">Development</option>
+                <option value="Production">Production</option>
+            </select>
+            <span asp-validation-for="PushEnvironment" class="text-danger"></span>
+            <div class="form-text">App notifications and PromoCode pushes use this environment and its registered FCM devices.</div>
+        </div>
+        <p class="form-text mt-2">Check that the code exists and is active in the configured ERP database before saving it.</p>
+        <div id="group-status" class="alert @statusStyle mt-3 mb-3" role="status" aria-live="polite">
+            <strong id="group-status-label">@Model.GroupStatus</strong>
+            <span id="group-status-message">— @Model.GroupStatusMessage</span>
+            <span id="group-details" class="d-block mt-1" hidden="@(Model.LoyaltyGroupId.HasValue ? null : "hidden")">Group ID: @Model.LoyaltyGroupId · Company code: @Model.CCode</span>
+        </div>
+        <button id="save-group-code" class="btn btn-centro" type="submit" disabled="@(Model.GroupStatus == "Active" ? null : "disabled")">Save settings</button>
+    </form>
+</div>
+<p class="text-muted mt-3" style="max-width: 720px">Saving a new GroupCode changes which group's campaigns, notifications, customers, and dashboard data this panel displays. Changing the app environment switches the notification list and future push sends to the matching Development or Production devices. Pending pushes for the other environment wait until it is selected again. Campaigns, customers, offers, and flyers are shared within the loyalty group. Each mobile API deployment still needs its own matching GroupCode and environment configuration. Firebase service accounts must match the selected app's Firebase project.</p>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial"/>
+    <script>
+        (() => {
+            const input = document.getElementById('GroupCode');
+            const checkButton = document.getElementById('check-group-code');
+            const saveButton = document.getElementById('save-group-code');
+            const panel = document.getElementById('group-status');
+            const label = document.getElementById('group-status-label');
+            const message = document.getElementById('group-status-message');
+            const details = document.getElementById('group-details');
+            let version = 0;
+
+            function show(status, detail, groupId, companyCode) {
+                panel.className = 'alert mt-3 mb-3 ' + (status === 'Active' ? 'alert-success'
+                    : ['Inactive', 'NotFound', 'Ambiguous', 'Invalid'].includes(status) ? 'alert-danger' : 'alert-warning');
+                label.textContent = status;
+                message.textContent = ' — ' + detail;
+                details.hidden = groupId == null;
+                details.textContent = groupId == null ? '' : `Group ID: ${groupId} · Company code: ${companyCode}`;
+                saveButton.disabled = status !== 'Active';
+            }
+
+            input.addEventListener('input', () => {
+                version++;
+                show('Unchecked', 'Check the GroupCode to confirm its status.', null, null);
+            });
+
+            checkButton.addEventListener('click', async () => {
+                const requestVersion = ++version;
+                const url = new URL('@Url.Action("CheckGroupCode", "Settings")', window.location.origin);
+                url.searchParams.set('groupCode', input.value.trim());
+                checkButton.disabled = true;
+                show('Checking', 'Checking the ERP loyalty group…', null, null);
+                try {
+                    const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+                    const result = await response.json();
+                    if (requestVersion === version)
+                        show(result.status, result.message, result.loyaltyGroupId, result.cCode);
+                } catch {
+                    if (requestVersion === version)
+                        show('Unavailable', 'The loyalty group could not be checked right now.', null, null);
+                } finally {
+                    checkButton.disabled = false;
+                }
+            });
+        })();
+    </script>
+}

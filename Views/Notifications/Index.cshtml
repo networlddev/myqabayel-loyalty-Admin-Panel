@@ -1,0 +1,149 @@
+@using QabayelMall.API.Services
+@model IReadOnlyList<LoyaltyNotification>
+@{
+    ViewData["Title"] = "App Notifications";
+    var availability = ViewData["DeviceAvailability"] as IReadOnlyDictionary<string, ActiveDeviceAvailability>;
+    var summaries = ViewData["DeliverySummaries"] as IReadOnlyDictionary<long, NotificationDeliverySummary>;
+    var pushEnvironment = ViewData["PushEnvironment"] as string ?? "Development";
+    var now = DateTime.UtcNow;
+}
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div><span class="eyebrow">LOYALTY MESSAGING</span><h1>App notifications</h1><p class="text-muted mb-0">Showing @pushEnvironment notifications. <a asp-controller="Settings" asp-action="Index">Change environment in Loyalty Settings</a>.</p></div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" asp-controller="NotificationSettings" asp-action="Index">Push settings</a>
+        <a class="btn btn-centro" asp-action="Create">+ Create notification</a>
+    </div>
+</div>
+@if (availability is not null)
+{
+    var active = availability.GetValueOrDefault(pushEnvironment);
+    <div class="alert @(active?.DeviceCount == 0 ? "alert-warning" : "alert-light border") mb-3">
+        Active @pushEnvironment FCM devices in this loyalty group: <strong>@(active?.DeviceCount ?? 0)</strong>
+        across @(active?.CustomerCount ?? 0) customer(s). A customer needs an active device registration in this environment to receive a push.
+    </div>
+}
+else if (Equals(ViewData["DeviceAvailabilityUnavailable"], true))
+{
+    <div class="alert alert-warning mb-3">Current device availability could not be checked. Saved notification and delivery results are still shown below.</div>
+}
+<form id="delete-selected-notifications" asp-action="DeleteSelected" method="post" class="d-flex align-items-center gap-2 mb-3">
+    <button id="delete-selected-button" type="submit" class="btn btn-outline-danger" disabled>Delete selected</button>
+    <span id="selected-notification-count" class="text-muted" aria-live="polite">0 selected</span>
+</form>
+<div class="panel table-responsive">
+    <table class="table align-middle mb-0">
+        <thead><tr><th><input id="select-all-notifications" type="checkbox" class="form-check-input" aria-label="Select all notifications" disabled="@(Model.All(x => x.DispatchStatus == "Sending"))" /></th><th>Title &amp; message</th><th>Date and time</th><th>Audience</th><th>App availability</th><th>Firebase push</th><th></th></tr></thead>
+        <tbody>
+        @if (Model.Count == 0) { <tr><td colspan="7" class="text-center text-muted py-5">No notifications have been created.</td></tr> }
+        @foreach (var item in Model)
+        {
+            var isAvailable = item.Status is "Published" or "Scheduled"
+                && item.ScheduledAtUtc <= now
+                && (item.ExpiresAtUtc is null || item.ExpiresAtUtc > now);
+            var isExpired = item.Status is "Published" or "Scheduled"
+                && item.ExpiresAtUtc is not null && item.ExpiresAtUtc <= now;
+            var appStatus = item.Status is "Draft" or "Archived" ? item.Status
+                : isExpired ? "Expired" : isAvailable ? "Live" : "Scheduled";
+            var statusClass = appStatus == "Live" ? "published"
+                : appStatus == "Expired" ? "archived" : appStatus.ToLowerInvariant();
+            NotificationDeliverySummary? delivery = null;
+            if (summaries is not null) summaries.TryGetValue(item.Id, out delivery);
+            var audienceLabel = item.AudienceType switch
+            {
+                "NeverPurchased" => "Never purchased",
+                "NoPurchase30" => "No purchase in 30 days",
+                "NoPurchase60" => "No purchase in 60 days",
+                "NoPurchase90" => "No purchase in 90 days",
+                "Selected" => "Selected customers",
+                _ => "All customers"
+            };
+            <tr>
+                <td><input type="checkbox" class="form-check-input notification-select" name="ids" value="@item.Id"
+                           form="delete-selected-notifications" aria-label="Select notification @item.Id"
+                           disabled="@(item.DispatchStatus == "Sending")" /></td>
+                <td>
+                    <div class="d-flex align-items-start gap-2">
+                        @if (!string.IsNullOrWhiteSpace(item.ImageUrl)) { <img src="@item.ImageUrl" alt="" class="rounded border" style="width: 52px; height: 52px; object-fit: cover" /> }
+                        <div><b>@QabayelMall.API.Services.CustomerNotificationText.HidePromoCodes(item.Title)</b><small class="d-block text-muted">@QabayelMall.API.Services.CustomerNotificationText.HidePromoCodes(item.Message)</small>
+                            @if (item.TargetId.HasValue) { <small class="d-block text-muted">Opens @item.TargetType #@item.TargetId</small> }
+                        </div>
+                    </div>
+                </td>
+                <td>@item.ScheduledAtUtc.ToLocalTime().ToString("dd MMM yyyy, h:mm tt")</td>
+                <td>@audienceLabel <small class="d-block text-muted">@item.GroupCode · @item.Environment</small></td>
+                <td><span class="status status-@statusClass">@appStatus</span></td>
+                <td>
+                    @if (item.Status == "Draft")
+                    {
+                        <span class="text-muted">Not sent</span>
+                    }
+                    else
+                    {
+                        <a asp-action="Details" asp-route-id="@item.Id">@item.DispatchStatus</a>
+                        @if (delivery is not null)
+                        {
+                            <small class="d-block text-muted">@delivery.AcceptedCount of @delivery.DeviceCount device(s) accepted
+                                @if (delivery.FailedCount > 0) { <span>· @delivery.FailedCount failed</span> }
+                                @if (delivery.WaitingCount > 0) { <span>· @delivery.WaitingCount waiting</span> }
+                            </small>
+                        }
+                        else if (item.DispatchStatus == "NoDevices")
+                        {
+                            <small class="d-block text-muted">0 eligible devices</small>
+                        }
+                        else
+                        {
+                            <small class="d-block text-muted">No device result yet</small>
+                        }
+                    }
+                </td>
+                <td><div class="d-flex flex-wrap gap-1 justify-content-end ms-auto" style="max-width: 230px">
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@item.Id">Details</a>
+                    @if (item.Status is "Draft" or "Scheduled")
+                    {
+                        <form asp-action="Publish" asp-route-id="@item.Id" method="post">
+                            <button class="btn btn-sm btn-success">Go live now</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a class="btn btn-sm btn-success" asp-action="Resend" asp-route-id="@item.Id">Send again</a>
+                    }
+                    @if (item.Status != "Archived") { <form asp-action="Archive" asp-route-id="@item.Id" method="post"><button class="btn btn-sm btn-outline-danger">Archive</button></form> }
+                    <form asp-action="Delete" asp-route-id="@item.Id" method="post"
+                          onsubmit="return confirm('Permanently delete this notification and its delivery history? Sent push alerts cannot be recalled.');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
+                </div></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+<script>
+    (() => {
+        const form = document.getElementById('delete-selected-notifications');
+        const selectAll = document.getElementById('select-all-notifications');
+        const checkboxes = Array.from(document.querySelectorAll('.notification-select:not(:disabled)'));
+        const button = document.getElementById('delete-selected-button');
+        const countLabel = document.getElementById('selected-notification-count');
+        const updateSelection = () => {
+            const selected = checkboxes.filter(checkbox => checkbox.checked).length;
+            button.disabled = selected === 0;
+            countLabel.textContent = `${selected} selected`;
+            selectAll.checked = checkboxes.length > 0 && selected === checkboxes.length;
+            selectAll.indeterminate = selected > 0 && selected < checkboxes.length;
+        };
+        selectAll.addEventListener('change', () => {
+            checkboxes.forEach(checkbox => { checkbox.checked = selectAll.checked; });
+            updateSelection();
+        });
+        checkboxes.forEach(checkbox => checkbox.addEventListener('change', updateSelection));
+        form.addEventListener('submit', event => {
+            const selected = checkboxes.filter(checkbox => checkbox.checked).length;
+            if (selected === 0 || !confirm(`Permanently delete ${selected} notification(s) and their delivery history? Sent push alerts cannot be recalled.`))
+                event.preventDefault();
+        });
+        updateSelection();
+    })();
+</script>

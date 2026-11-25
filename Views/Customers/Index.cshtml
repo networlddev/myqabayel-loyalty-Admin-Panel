@@ -1,0 +1,74 @@
+@model IReadOnlyList<CustomerSummary>
+@{
+    ViewData["Title"] = "Customers & Points";
+}
+
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+    <div>
+        <span class="eyebrow">LOYALTY CUSTOMERS</span>
+        <h1>Customers &amp; Points</h1>
+        <p class="text-muted mb-0">Manage account access and choose whether each customer can see flyers and special offers. The latest 500 ERP customers are shown.</p>
+    </div>
+    @if (ViewBag.Source is string source)
+    {
+        <span class="badge rounded-pill text-bg-light border px-3 py-2">Data source: @source</span>
+    }
+</div>
+<form method="get" asp-action="Index" class="d-flex gap-2 mb-3">
+    <input type="search" name="search" value="@ViewBag.Search" class="form-control" style="max-width:26rem" placeholder="Search name, mobile or customer ID" aria-label="Search customers" />
+    <button class="btn btn-outline-primary" type="submit">Search</button>
+</form>
+
+@if (ViewBag.Error is string error)
+{
+    <div class="alert alert-warning">Customer data is unavailable: @error</div>
+}
+@if (TempData["Success"] is string success) { <div class="alert alert-success">@success</div> }
+
+<div class="panel">
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead><tr><th>Customer</th><th>Contact</th><th>Card</th><th>Opening</th><th>Redeemed</th><th>Earned/current</th><th>Available</th><th>Opening date</th><th>Account</th><th>App activity</th><th>Content access</th><th>Action</th></tr></thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="12" class="text-center text-muted py-5">No customer records were returned from the configured data sources.</td></tr>
+                }
+                @foreach (var customer in Model)
+                {
+                    <tr>
+                        <td><b>@customer.Name</b><div class="small text-muted">ID: @customer.Id</div></td>
+                        <td>@customer.MobileNo@if (!string.IsNullOrWhiteSpace(customer.Email)){<div class="small text-muted">@customer.Email</div>}</td>
+                        <td>@(customer.CardNumber ?? "—")</td>
+                        <td>@customer.OpeningPoints.ToString("N2")</td>
+                        <td>@customer.RedeemedOpeningPoints.ToString("N2")</td>
+                        <td>@customer.Points.ToString("N2")</td>
+                        <td><b>@customer.TotalAvailablePoints.ToString("N2")</b></td>
+                        <td>@(customer.OpeningDate?.ToString("dd MMM yyyy") ?? customer.RegisteredAt?.ToString("dd MMM yyyy") ?? "—")</td>
+                        <td><span class="badge @(customer.Active ? "text-bg-success" : "text-bg-secondary")">@(customer.Active ? "Enabled" : "Deactivated")</span></td>
+                        <td>
+                            @if (customer.Active && customer.LastSeenAtUtc >= DateTime.UtcNow.AddMinutes(-5)) { <span class="badge text-bg-success">Using now</span> }
+                            else if (customer.LastSeenAtUtc.HasValue) { <span>@customer.LastSeenAtUtc.Value.ToLocalTime().ToString("dd MMM yyyy, h:mm tt")</span> }
+                            else { <span class="text-muted">No app activity yet</span> }
+                        </td>
+                        <td>
+                            <form asp-action="SetVisibility" method="post" class="d-flex flex-column gap-1">
+                                <input type="hidden" name="id" value="@customer.Id" />
+                                <label><input type="checkbox" name="showFlyers" value="true" checked="@customer.ShowFlyers" /> Flyers</label>
+                                <label><input type="checkbox" name="showOffers" value="true" checked="@customer.ShowOffers" /> Special offers</label>
+                                <button type="submit" class="btn btn-outline-primary btn-sm">Save visibility</button>
+                            </form>
+                        </td>
+                        <td>
+                            <form asp-action="SetActive" method="post" onsubmit="return confirm('@(customer.Active ? "Deactivate this customer and revoke app sessions?" : "Reactivate this customer account?")');">
+                                <input type="hidden" name="id" value="@customer.Id" />
+                                <input type="hidden" name="active" value="@(customer.Active ? "false" : "true")" />
+                                <button type="submit" class="btn @(customer.Active ? "btn-outline-danger" : "btn-outline-success") btn-sm">@(customer.Active ? "Deactivate" : "Reactivate")</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

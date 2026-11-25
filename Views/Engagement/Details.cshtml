@@ -1,0 +1,108 @@
+@model QabayelMall.API.Services.EngagementDetailsModel
+@{
+    ViewData["Title"] = "Customer engagement";
+}
+<a asp-action="Index" class="btn btn-outline-secondary btn-sm mb-3">← All content</a>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <div class="text-uppercase text-muted small fw-bold">@Model.Content.ContentType #@Model.Content.Id · @Model.Content.Status</div>
+        <h1 class="h3 mb-1">@Model.Content.Title</h1>
+        <p class="text-muted mb-0">@Model.Content.Reactions reactions · @Model.Content.Comments visible comments</p>
+    </div>
+</div>
+
+<div class="card card-body mb-4">
+    <h2 class="h5">Reaction counts</h2>
+    <div class="d-flex flex-wrap gap-2">
+        @foreach (var reaction in Model.ReactionCounts)
+        {
+            <span class="badge rounded-pill text-bg-light border fs-6">@reaction.Key @reaction.Value</span>
+        }
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><h2 class="h5 mb-0">Customer reactions</h2></div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Customer</th><th>Reaction</th><th>Updated (UTC)</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var reaction in Model.Reactions)
+            {
+                <tr>
+                    <td>Customer #@reaction.CustomerId</td>
+                    <td>@reaction.Reaction</td>
+                    <td>@reaction.UpdatedAtUtc.ToString("dd MMM yyyy HH:mm")</td>
+                    <td>
+                        <form asp-action="RemoveReaction" method="post" class="m-0">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="type" value="@Model.Content.ContentType" />
+                            <input type="hidden" name="id" value="@Model.Content.Id" />
+                            <input type="hidden" name="reactionId" value="@reaction.Id" />
+                            <button class="btn btn-outline-danger btn-sm" type="submit" onclick="return confirm('Remove this customer reaction?')">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (Model.Reactions.Count == 0)
+            {
+                <tr><td colspan="4" class="text-center text-muted py-4">No customer reactions yet.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer d-flex gap-2">
+        @if (Model.ReactionPage > 1)
+        {
+            <a class="btn btn-outline-secondary btn-sm" asp-action="Details" asp-route-type="@Model.Content.ContentType" asp-route-id="@Model.Content.Id" asp-route-reactionPage="@(Model.ReactionPage - 1)" asp-route-commentPage="@Model.CommentPage">Previous reactions</a>
+        }
+        @if (Model.MoreReactions)
+        {
+            <a class="btn btn-outline-secondary btn-sm" asp-action="Details" asp-route-type="@Model.Content.ContentType" asp-route-id="@Model.Content.Id" asp-route-reactionPage="@(Model.ReactionPage + 1)" asp-route-commentPage="@Model.CommentPage">More reactions</a>
+        }
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><h2 class="h5 mb-0">Customer comments</h2></div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Customer</th><th>Comment</th><th>Date (UTC)</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var comment in Model.Comments)
+            {
+                <tr>
+                    <td><strong>@comment.CustomerName</strong><div class="small text-muted">#@comment.CustomerId</div></td>
+                    <td style="max-width: 480px; white-space: pre-wrap; overflow-wrap: anywhere">@comment.Text</td>
+                    <td>@comment.CreatedAtUtc.ToString("dd MMM yyyy HH:mm")</td>
+                    <td><span class="badge @(comment.IsVisible ? "text-bg-success" : "text-bg-secondary")">@(comment.IsVisible ? "Visible" : "Hidden")</span></td>
+                    <td>
+                        <form asp-action="SetCommentVisibility" method="post" class="m-0">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="type" value="@Model.Content.ContentType" />
+                            <input type="hidden" name="id" value="@Model.Content.Id" />
+                            <input type="hidden" name="commentId" value="@comment.Id" />
+                            <input type="hidden" name="visible" value="@(!comment.IsVisible ? "true" : "false")" />
+                            <button class="btn @(comment.IsVisible ? "btn-outline-danger" : "btn-outline-success") btn-sm" type="submit">@(comment.IsVisible ? "Hide" : "Restore")</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (Model.Comments.Count == 0)
+            {
+                <tr><td colspan="5" class="text-center text-muted py-4">No customer comments yet.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer d-flex gap-2">
+        @if (Model.CommentPage > 1)
+        {
+            <a class="btn btn-outline-secondary btn-sm" asp-action="Details" asp-route-type="@Model.Content.ContentType" asp-route-id="@Model.Content.Id" asp-route-reactionPage="@Model.ReactionPage" asp-route-commentPage="@(Model.CommentPage - 1)">Previous comments</a>
+        }
+        @if (Model.MoreComments)
+        {
+            <a class="btn btn-outline-secondary btn-sm" asp-action="Details" asp-route-type="@Model.Content.ContentType" asp-route-id="@Model.Content.Id" asp-route-reactionPage="@Model.ReactionPage" asp-route-commentPage="@(Model.CommentPage + 1)">More comments</a>
+        }
+    </div>
+</div>

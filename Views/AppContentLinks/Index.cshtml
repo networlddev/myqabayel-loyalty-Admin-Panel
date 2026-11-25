@@ -1,0 +1,35 @@
+@model AppContentLinksViewModel
+@{ ViewData["Title"] = "Mobile App Links"; }
+<div class="mb-4">
+    <span class="eyebrow">APPLICATION SETTINGS</span>
+    <h1>Mobile app links</h1>
+    <p class="text-muted">Set the pages shown in the mobile app for loyalty group <strong>@Model.GroupCode</strong>.</p>
+</div>
+<div class="panel p-4" style="max-width: 800px">
+    <form asp-action="Index" method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <div class="mb-3">
+            <label asp-for="TermsAndConditionsWebViewUrl" class="form-label fw-semibold"></label>
+            <input asp-for="TermsAndConditionsWebViewUrl" class="form-control" type="url" maxlength="2048" placeholder="https://..." />
+            <span asp-validation-for="TermsAndConditionsWebViewUrl" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="PrivacyPolicyWebViewUrl" class="form-label fw-semibold"></label>
+            <input asp-for="PrivacyPolicyWebViewUrl" class="form-control" type="url" maxlength="2048" placeholder="https://..." />
+            <span asp-validation-for="PrivacyPolicyWebViewUrl" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="AboutWebViewUrl" class="form-label fw-semibold"></label>
+            <input asp-for="AboutWebViewUrl" class="form-control" type="url" maxlength="2048" placeholder="https://..." />
+            <span asp-validation-for="AboutWebViewUrl" class="text-danger"></span>
+        </div>
+        <div class="mb-4">
+            <label asp-for="FaqLink" class="form-label fw-semibold"></label>
+            <input asp-for="FaqLink" class="form-control" type="url" maxlength="2048" placeholder="https://..." />
+            <span asp-validation-for="FaqLink" class="text-danger"></span>
+        </div>
+        <button class="btn btn-centro" type="submit">Save links</button>
+    </form>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial"/> }

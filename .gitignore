@@ -1,0 +1,30 @@
+# Local build and IDE files
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# Deployment output and uploaded content
+artifacts/
+publish/
+logs/
+wwwroot/uploads/
+
+# Machine-specific settings and credentials
+appsettings.json
+appsettings.*.json
+!appsettings.example.json
+.env
+.env.*
+firebase/
+*.pfx
+*.p12
+*.pem
+*.key
+*.bak
+*firebase-adminsdk-*.json
+
+# Images inherited from the separate mall admin
+wwwroot/images/qabayel-mall-logo.png
+wwwroot/images/centro-icon.png

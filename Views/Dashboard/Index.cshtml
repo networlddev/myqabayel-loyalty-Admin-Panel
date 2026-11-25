@@ -1,0 +1,107 @@
+@model DashboardViewModel
+<link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/dashboard-live.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/dashboard-redesign.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/myqabayel-theme.css" asp-append-version="true" />
+@{ ViewData["Title"] = "Dashboard"; var maxActivity = Math.Max(1, Model.DailyActivity.DefaultIfEmpty(new DashboardDailyActivity("", 0)).Max(x => x.Count)); var maxCustomerActivity = Math.Max(1L, Model.CustomerMonthPerformance?.Points.Max(point => point.Count) ?? 0L); }
+<section class="mq-dashboard-intro">
+    <div class="mq-intro-copy">
+        <span class="mq-kicker">MY QABAYEL · ADMIN WORKSPACE</span>
+        <h1>Run your loyalty programme with clarity.</h1>
+        <p>See what needs attention, manage customer content, and keep your team moving from one place.</p>
+        <div class="mq-intro-tags">
+            <span><i aria-hidden="true"></i> Group @Model.GroupCode</span>
+            <span><i aria-hidden="true"></i> @Model.PushEnvironment environment</span>
+        </div>
+        <div class="mq-intro-actions">
+            <a class="btn mq-primary-action" asp-controller="Campaigns" asp-action="Create">＋ Create campaign</a>
+            <a class="btn mq-secondary-action" asp-controller="Notifications" asp-action="Create">Create notification ↗</a>
+        </div>
+    </div>
+    <div class="mq-intro-art" aria-hidden="true"><img src="~/images/al-qabayel-discount-center.jpg" alt="" /></div>
+</section>
+@if (Model.DatabaseMessage is not null) { <div class="alert alert-warning">@Model.DatabaseMessage</div> }
+<section class="mq-section-heading">
+    <div><span class="eyebrow">AT A GLANCE</span><h2>Workspace overview</h2></div>
+    <span class="mq-section-note">Live data for @Model.GroupCode</span>
+</section>
+<section class="mq-overview-grid" aria-label="Loyalty overview">
+    <a class="mq-stat mq-stat-blue" asp-controller="Customers" asp-action="Index">
+        <span class="mq-stat-icon" aria-hidden="true">♙</span><span class="mq-stat-label">Loyalty customers</span>
+        <strong>@(Model.CoreEdgeMetrics?.TotalCustomers.ToString("N0") ?? "—")</strong><small>View customers and points <b>↗</b></small>
+    </a>
+    <a class="mq-stat mq-stat-red" asp-controller="Campaigns" asp-action="Index">
+        <span class="mq-stat-icon" aria-hidden="true">▣</span><span class="mq-stat-label">Published campaigns</span>
+        <strong>@Model.ActiveCampaigns</strong><small>@Model.TotalCampaigns total campaigns <b>↗</b></small>
+    </a>
+    <a class="mq-stat mq-stat-gold" asp-controller="Campaigns" asp-action="Index">
+        <span class="mq-stat-icon" aria-hidden="true">✦</span><span class="mq-stat-label">Draft campaigns</span>
+        <strong>@Model.DraftCampaigns</strong><small>Ready for review <b>↗</b></small>
+    </a>
+    <a class="mq-stat mq-stat-cyan" asp-controller="Notifications" asp-action="Index">
+        <span class="mq-stat-icon" aria-hidden="true">◉</span><span class="mq-stat-label">App notifications</span>
+        <strong>@Model.TotalNotifications</strong><small>@Model.PushEnvironment environment <b>↗</b></small>
+    </a>
+</section>
+<section class="mq-live-strip" aria-label="Customer and sales figures">
+    <div><span>Enabled accounts</span><strong>@(Model.CoreEdgeMetrics?.EnabledCustomers.ToString("N0") ?? "—")</strong></div>
+    <div><span>Active in 24 hours</span><strong>@(Model.CustomerActivity?.ActiveLast24Hours.ToString("N0") ?? "—")</strong></div>
+    <div><span>Loyalty sales</span><strong>@(Model.CoreEdgeMetrics?.LoyaltySales.ToString("N2") ?? "—")</strong></div>
+    <div><span>Customer points</span><strong>@(Model.CoreEdgeMetrics?.TotalPoints.ToString("N2") ?? "—")</strong></div>
+</section>
+@if (Model.CoreEdgeMessage is not null) { <div class="alert alert-warning">@Model.CoreEdgeMessage</div> }
+@if (Model.CustomerActivityMessage is not null) { <div class="alert alert-warning">@Model.CustomerActivityMessage</div> }
+<section class="mq-work-grid">
+    <article class="mq-work-panel">
+        <div class="mq-panel-heading"><div><span class="eyebrow">WORK QUEUE</span><h2>What needs attention</h2></div><a asp-controller="Campaigns" asp-action="Index">All campaigns ↗</a></div>
+        <a class="mq-work-row" asp-controller="Campaigns" asp-action="Index"><span class="mq-work-dot mq-dot-red"></span><span><strong>Campaign drafts</strong><small>Review and publish when ready</small></span><b>@Model.DraftCampaigns</b></a>
+        <a class="mq-work-row" asp-controller="Notifications" asp-action="Index"><span class="mq-work-dot mq-dot-blue"></span><span><strong>Notification drafts</strong><small>Finish messages for your audience</small></span><b>@Model.DraftNotifications</b></a>
+        <a class="mq-work-row" asp-controller="Notifications" asp-action="Index"><span class="mq-work-dot mq-dot-gold"></span><span><strong>Pushes waiting</strong><small>Published or scheduled for delivery</small></span><b>@Model.QueuedNotifications</b></a>
+        <div class="mq-push-state @(Model.PushConfigured ? "is-ready" : "needs-setup")">
+            <span class="mq-push-icon" aria-hidden="true">@(Model.PushConfigured ? "✓" : "⚙")</span>
+            <div><strong>@(Model.PushConfigured ? "Push sender configured" : "Push setup needed")</strong><small>@(Model.PushConfigured ? "The selected environment has a credential and project ID." : "Add the MY QABAYEL Firebase credential and project ID before sending push.")</small></div>
+            <a asp-controller="NotificationSettings" asp-action="Index">Settings ↗</a>
+        </div>
+    </article>
+    <article class="mq-quick-panel">
+        <div class="mq-panel-heading"><div><span class="eyebrow">SHORTCUTS</span><h2>Quick actions</h2></div></div>
+        <a asp-controller="Campaigns" asp-action="Create" asp-route-type="Flyer"><span>▤</span><div><strong>New flyer</strong><small>Add multi-image content</small></div><b>↗</b></a>
+        <a asp-controller="Campaigns" asp-action="Create" asp-route-type="Offer"><span>◇</span><div><strong>New offer</strong><small>Promote a customer benefit</small></div><b>↗</b></a>
+        <a asp-controller="Notifications" asp-action="Create"><span>◉</span><div><strong>New notification</strong><small>Draft an in-app message</small></div><b>↗</b></a>
+        <a asp-controller="CustomerPromoCodes" asp-action="Index"><span>▦</span><div><strong>Customer PromoCodes</strong><small>Manage issued discounts</small></div><b>↗</b></a>
+    </article>
+</section>
+<section class="dashboard-grid">
+<article class="panel chart-panel">
+    <div class="panel-title chart-panel-title"><div><h2>Campaign activity</h2><p>Campaigns created or updated during the last 7 days</p></div><span class="period-button">Last 7 days</span></div>
+    <div class="chart-summary"><strong>@Model.LastSevenDaysActivity</strong>@if(Model.ActivityChangePercent.HasValue){<span class="@(Model.ActivityChangePercent < 0 ? "negative" : "")">@(Model.ActivityChangePercent >= 0 ? "↗" : "↘") @Math.Abs(Model.ActivityChangePercent.Value)% vs previous 7 days</span>}else{<span>New activity; no previous-period baseline</span>}</div>
+    <div class="chart-toolbar"><span class="chart-legend"><i aria-hidden="true"></i> Daily changes</span><div class="chart-switcher" role="group" aria-label="Choose graph view" hidden><button type="button" class="chart-switch" data-chart-type="line" aria-pressed="true">Line</button><button type="button" class="chart-switch" data-chart-type="bar" aria-pressed="false">Bar</button><button type="button" class="chart-switch" data-chart-type="area" aria-pressed="false">Area</button></div></div>
+    <div id="campaignChart" class="campaign-chart" role="img" aria-label="Campaign activity graph" aria-describedby="campaignChartDescription" hidden></div>
+    <div id="campaignChartFallback" class="activity-bars chart-fallback" role="img" aria-label="Campaign activity during the last seven days">@foreach(var day in Model.DailyActivity){<div class="activity-bar-column" data-count="@day.Count" data-label="@day.Label"><span class="activity-value">@day.Count</span><div class="activity-bar" style="height:@(Math.Max(5, day.Count * 150 / maxActivity))px"></div><small>@day.Label</small></div>}</div>
+    <span id="campaignChartDescription" class="visually-hidden">@string.Join(", ", Model.DailyActivity.Select(day => $"{day.Label}: {day.Count} campaigns"))</span>
+    @if (Model.LastSevenDaysActivity == 0) { <p class="chart-empty">No campaign changes this week. New activity will appear here.</p> }
+</article>
+<article class="panel activity-panel"><div class="panel-title"><div><h2>Recent activity</h2><p>Latest campaign actions</p></div><a asp-controller="Campaigns" asp-action="Index">View all ↗</a></div>@if (Model.Campaigns.Count == 0) { <div class="empty-activity">Campaign activity will appear here.</div> }@foreach (var item in Model.Campaigns.Take(4)) { <div class="activity-item"><div class="activity-avatar">@item.CampaignType[..1]</div><div><p><b>@item.Title</b> is <strong>@item.Status.ToLowerInvariant()</strong></p><span>@item.UpdatedAtUtc.ToLocalTime().ToString("dd MMM yyyy, h:mm tt")</span></div></div> }</article></section>
+@if (Model.CustomerMonthPerformance is not null && Model.CustomerYearPerformance is not null)
+{
+<section id="customer-growth" class="panel customer-performance-panel">
+    <div class="panel-title customer-panel-title"><div><h2>Customer growth</h2><p>New loyalty members, based on registration date</p></div><div class="customer-period-switch" role="group" aria-label="Choose customer performance period" hidden><button type="button" data-customer-period="month" aria-pressed="true">Last month</button><button type="button" data-customer-period="year" aria-pressed="false">Last year</button></div></div>
+    <div class="customer-performance-heading"><div><span>New members</span><strong id="customerPerformanceTotal">@Model.CustomerMonthPerformance.Total.ToString("N0")</strong><small id="customerPerformancePeriod">Last 30 days</small></div><p id="customerPerformanceChange">@if (Model.CustomerMonthPerformance.ChangePercent.HasValue) { <span class="@(Model.CustomerMonthPerformance.ChangePercent < 0 ? "negative" : "")">@(Model.CustomerMonthPerformance.ChangePercent >= 0 ? "↗" : "↘") @Math.Abs(Model.CustomerMonthPerformance.ChangePercent.Value)% vs previous 30 days</span> } else { <span>New registrations; no previous-period baseline</span> }</p></div>
+    <div class="chart-toolbar"><span class="chart-legend"><i aria-hidden="true"></i> Registrations</span><div class="chart-switcher customer-chart-switcher" role="group" aria-label="Choose customer graph view" hidden><button type="button" class="chart-switch" data-chart-type="line" aria-pressed="true">Line</button><button type="button" class="chart-switch" data-chart-type="bar" aria-pressed="false">Bar</button><button type="button" class="chart-switch" data-chart-type="area" aria-pressed="false">Area</button></div></div>
+    <div id="customerChart" class="campaign-chart" role="img" aria-label="Customer registration graph" aria-describedby="customerChartDescription" hidden></div>
+    <div id="customerMonthData" class="activity-bars chart-fallback" data-total="@Model.CustomerMonthPerformance.Total" data-change="@Model.CustomerMonthPerformance.ChangePercent" role="img" aria-label="Customer registrations during the last 30 days">@foreach (var point in Model.CustomerMonthPerformance.Points) { <div class="activity-bar-column" data-count="@point.Count" data-label="@point.Label"><span class="activity-value">@point.Count</span><div class="activity-bar" style="height:@(Math.Max(5, point.Count * 150 / maxCustomerActivity))px"></div><small>@point.Label</small></div> }</div>
+    <div id="customerYearData" data-total="@Model.CustomerYearPerformance.Total" data-change="@Model.CustomerYearPerformance.ChangePercent" hidden>@foreach (var point in Model.CustomerYearPerformance.Points) { <span data-count="@point.Count" data-label="@point.Label"></span> }</div>
+    <span id="customerChartDescription" class="visually-hidden">@string.Join(", ", Model.CustomerMonthPerformance.Points.Select(point => $"{point.Label}: {point.Count} new members"))</span>
+    <p id="customerChartNote" class="customer-chart-note">@(Model.CustomerMonthPerformance.Total == 0 ? "No new registrations in this period." : "Counts show new registrations in each interval.")</p>
+</section>
+}
+else if (Model.CustomerPerformanceMessage is not null)
+{
+<div class="alert alert-warning">@Model.CustomerPerformanceMessage</div>
+}
+<section class="panel campaign-panel"><div class="panel-title"><div><h2>Recent campaigns</h2><p>Manage publication, scheduling and ERP synchronization</p></div><a asp-controller="Campaigns" asp-action="Index">View all ↗</a></div>
+@if (Model.Campaigns.Count == 0) {
+    <div class="mq-empty-campaigns"><span aria-hidden="true">▤</span><strong>Your first campaign starts here</strong><p>Create a flyer, offer or advertisement for MY QABAYEL customers.</p><a class="btn btn-centro" asp-controller="Campaigns" asp-action="Create">Create campaign</a></div>
+} else { <partial name="_CampaignTable" model="Model.Campaigns"/> }
+</section>
+@section Scripts { <script src="~/js/dashboard-chart.js" asp-append-version="true"></script><script src="~/js/customer-chart.js" asp-append-version="true"></script> }

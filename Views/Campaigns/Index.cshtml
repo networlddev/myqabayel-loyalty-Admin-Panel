@@ -1,0 +1,3 @@
+@model IReadOnlyList<Campaign>
+@{ var type=ViewBag.Type as string; ViewData["Title"]=type??"Campaigns"; }
+<div class="d-flex justify-content-between align-items-end mb-4"><div><span class="eyebrow">CONTENT MANAGEMENT</span><h1>@(type??"All campaigns")</h1><p class="text-muted mb-0">Create, review, and publish content for your customers.</p></div><a class="btn btn-centro" asp-action="Create" asp-route-type="@(type??"Flyer")">Create @(type??"campaign")</a></div><div class="panel"><partial name="_CampaignTable" model="Model"/></div>
