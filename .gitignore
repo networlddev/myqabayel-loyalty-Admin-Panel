@@ -24,7 +24,3 @@ firebase/
 *.key
 *.bak
 *firebase-adminsdk-*.json
-
-# Images inherited from the separate mall admin
-wwwroot/images/qabayel-mall-logo.png
-wwwroot/images/centro-icon.png
